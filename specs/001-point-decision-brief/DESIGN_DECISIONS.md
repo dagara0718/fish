@@ -353,3 +353,13 @@ through explicit confirmation into a decision detail panel: fishing access statu
 never inferring "allowed" from absent data), current environment, and official species index. Access
 status, TrustStatus, and official grade/score remain three distinct models, never merged. The Demo
 fixture app, Worker, and root DESIGN.md are unchanged by this delta.
+
+# v1.4 governing delta
+
+The current user-approved scope is documented in [v1.4-product-delta.md](v1.4-product-delta.md). It adds a
+separate, rule-based "environment-based species guidance" (ENVIRONMENT_BASED_GUIDANCE) alongside the
+existing official KHOA species index (OFFICIAL_FISHING_INDEX) — never merged into one score, never an
+AI/probability claim, never computed from official grade/score. Species without a cited-evidence
+SpeciesProfile (including KHOA's "기타어종") get no guidance entry. No directional current data is
+connected; MarineCurrentProvider ships NOT_CONNECTED only. NAVER map, Worker, KHOA connectivity, and
+the Demo fixture app are unchanged by this delta.

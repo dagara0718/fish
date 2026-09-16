@@ -42,6 +42,22 @@ describe('Live official index', () => {
     expect(result.kind).toBe('SUCCESS')
     if ('species' in result) expect(result.species[0]!.evaluatedAt).toContain('2099-01-01')
   })
+  it('attaches environment-based guidance independent of official grade/score, using only environment fields', () => {
+    const a = normalizeOfficial([item], point)
+    const b = normalizeOfficial([{ ...item, totalIndex: '나쁨', lastScr: 1 }], point)
+    if (!('guidance' in a) || !('guidance' in b)) throw Error('expected guidance on both results')
+    expect(a.guidance).toEqual(b.guidance)
+    expect(a.guidance!.length).toBeGreaterThan(0)
+    expect(a.guidance!.every(entry => entry.assessmentType === 'ENVIRONMENT_BASED_GUIDANCE')).toBe(true)
+  })
+  it('carries STALE guidance trust through the cached-fallback path, not just species/environment', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(envelope())).mockRejectedValueOnce(new Error('offline'))
+    const provider = new LiveOfficialFishingIndexProvider('https://proxy.example', fetcher)
+    await provider.getOfficialIndex(point)
+    const stale = await provider.getOfficialIndex(point)
+    if (!('guidance' in stale)) throw Error('expected guidance')
+    expect(stale.guidance!.every(entry => entry.trustStatus === 'STALE')).toBe(true)
+  })
   it('builds actual catalog and rejects insecure proxy URL', async () => {
     const provider = new LiveOfficialFishingIndexProvider('https://proxy.example', vi.fn<typeof fetch>().mockResolvedValue(Response.json(envelope())))
     expect(await provider.getCatalog('갯바위')).toHaveLength(1)

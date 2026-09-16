@@ -1,6 +1,7 @@
 import { parseEnvelope, type OfficialItem } from '../../shared/fishing-api'
 import type { EnvironmentalObservation, FishingType, OfficialFishingIndexProvider, OfficialFishingPointRef, OfficialIndexResult } from './contracts'
 import type { TrustStatus } from '../domain/contracts'
+import { computeEnvironmentGuidance } from '../species-guidance/environment-guidance-provider'
 
 export function seoulDate(now = new Date()) { return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(now).replaceAll('-', '') }
 const source = '국립해양조사원 · 바다낚시지수'
@@ -29,7 +30,9 @@ export function normalizeOfficial(items: OfficialItem[], point: OfficialFishingP
   }
   // lastScr is confirmed absent on real responses (2026-09-16 sample); it is not a SUCCESS requirement.
   const partial = records.some(item => !item.seafsTgfshNm || !item.totalIndex || !item.predcYmd || !item.predcNoonSeCd)
-  return { kind: records.every(item => trust(item) === 'STALE') ? 'STALE_CACHE' : partial ? 'PARTIAL' : 'SUCCESS', point, species, environment: { locationReference: point, evaluatedAt: time(records[0]!), observations: observations.filter((item, index, all) => all.findIndex(other => JSON.stringify(other) === JSON.stringify(item)) === index) }, demo: false }
+  // Guidance reads only raw environment fields on `records` — never `species`/officialGrade/officialScore.
+  const guidance = computeEnvironmentGuidance(records, point, today)
+  return { kind: records.every(item => trust(item) === 'STALE') ? 'STALE_CACHE' : partial ? 'PARTIAL' : 'SUCCESS', point, species, environment: { locationReference: point, evaluatedAt: time(records[0]!), observations: observations.filter((item, index, all) => all.findIndex(other => JSON.stringify(other) === JSON.stringify(item)) === index) }, demo: false, guidance }
 }
 export class LiveOfficialFishingIndexProvider implements OfficialFishingIndexProvider {
   private cache = new Map<string, OfficialIndexResult>()
@@ -65,7 +68,7 @@ export class LiveOfficialFishingIndexProvider implements OfficialFishingIndexPro
     } catch (error) {
       if (signal?.aborted) throw error
       const cached = this.cache.get(point.officialPointId)
-      if (cached && 'species' in cached) return { ...cached, kind: 'STALE_CACHE', species: cached.species.map(item => ({ ...item, trustStatus: item.trustStatus === 'CONFLICT' ? 'CONFLICT' : 'STALE' })), environment: { ...cached.environment, observations: cached.environment.observations.map(item => ({ ...item, trustStatus: item.trustStatus === 'CONFLICT' ? 'CONFLICT' : 'STALE' })) } }
+      if (cached && 'species' in cached) return { ...cached, kind: 'STALE_CACHE', species: cached.species.map(item => ({ ...item, trustStatus: item.trustStatus === 'CONFLICT' ? 'CONFLICT' : 'STALE' })), environment: { ...cached.environment, observations: cached.environment.observations.map(item => ({ ...item, trustStatus: item.trustStatus === 'CONFLICT' ? 'CONFLICT' : 'STALE' })) }, guidance: (cached.guidance ?? []).map(item => ({ ...item, trustStatus: 'STALE' as const })) }
       return { kind: 'COLLECTION_FAILED', point, reason: error instanceof Error && error.message === 'MALFORMED_RESPONSE' ? '공식 응답 형식을 확인할 수 없습니다.' : '공식 데이터를 확인하지 못했습니다. 다시 시도해 주세요.', demo: false }
     }
   }

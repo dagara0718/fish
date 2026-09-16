@@ -224,3 +224,22 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px 24px 32px; }
 .access-status-evidence { list-style:none; margin:10px 0 0; padding:0; font-size:13px; color:#5b616e }
 .access-status-note { margin:12px 0 0; font-size:12px; color:#5b616e }
 @media(max-width:640px) { .nearest-candidates,.access-status-section { padding:16px } }
+.guidance-section { margin-top:20px; padding-top:20px; border-top:1px solid #eef0f3 }
+.guidance-summary { list-style:none; margin:12px 0 16px; padding:0; display:flex; flex-wrap:wrap; gap:10px; font-size:13px }
+.guidance-summary li { padding:4px 10px; border-radius:20px; background:#f7f9ff; border:1px solid #dee1e6 }
+.guidance-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-bottom:12px }
+.guidance-card { padding:14px 16px; border:1px solid #dee1e6; border-radius:14px }
+.guidance-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px }
+.guidance-top h4 { margin:0; font-size:14px }
+.suitability-badge { display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; border:1px solid #dee1e6; color:#5b616e }
+.suitability-badge[data-level="HIGH"] { border-color:#b9cbe5; color:#254d83 }
+.suitability-badge[data-level="LOW"] { border-color:#d9aab0; color:var(--color-danger) }
+.suitability-badge[data-level="INSUFFICIENT_EVIDENCE"] { border-style:dashed; color:var(--color-warning) }
+.guidance-card details { margin-top:8px; font-size:12px }
+.guidance-card summary { cursor:pointer; color:#003ecc; padding:6px 0 }
+.factor-list { list-style:none; margin:6px 0 0; padding:0; display:flex; flex-direction:column; gap:6px }
+.factor-list li { display:flex; align-items:flex-start; gap:6px }
+.factor-list li[data-status="MISMATCH"] { color:var(--color-danger) }
+.factor-list li[data-status="UNKNOWN"] { color:#5b616e }
+.guidance-note { margin:12px 0 0; font-size:12px; color:#5b616e }
+@media(max-width:640px) { .guidance-grid { grid-template-columns:1fr } }

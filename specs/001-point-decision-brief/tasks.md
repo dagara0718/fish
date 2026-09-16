@@ -241,3 +241,15 @@ silently on Node). Verified against the deployed Worker and against production
 https://dagara0718.github.io/fish/: real catalog of 1,750 records loads, 가거도 selected, real species
 (감성돔·기타어종·농어·돌돔·우럭·참돔) and environment values render, "낚시 이용 상태" shows 확인 필요
 (never 가능). `BLOCKED-KEY-KHOA` from the v1.2/v1.3 reports is resolved — Live mode is fully connected.
+
+# v1.4 Tasks — environment-based species guidance
+
+- [X] T074 [US12] SpeciesProfile/evidence contracts and the 6 researched profiles in src/species-guidance/contracts.ts, species-profiles.ts; REQ-FUNC-PROFILE-001~002; Depends on: v1.4 analyze; Blocks: T075. Verify version stamp, evidence citations, UNKNOWN for unconfirmed fields.
+- [X] T075 [US11,US13] scoring-policy.ts (factor classification + suitability rule) and environment-guidance-provider.ts (computes from raw KHOA records, never from official grade/score) in src/species-guidance/*; REQ-FUNC-GUIDANCE-001~003,005~006, REQ-NFR-TRUST-006; Depends on: T074; Blocks: T077. Verify deterministic output, UNKNOWN != mismatch, insufficient-evidence gating, trust propagation.
+- [X] T076 [US14] MarineCurrentProvider boundary + NotConnectedMarineCurrentProvider in src/species-guidance/contracts.ts; REQ-NFR-CURRENT-001~002; Depends on: v1.4 analyze; Blocks: T077. Verify no direction inferred from minCrsp/maxCrsp.
+- [X] T077 [US11] UI: 환경 기반 예상어종 section + factor detail in src/features/official-index/*, src/styles/global.css; REQ-FUNC-GUIDANCE-001~002, REQ-FUNC-GUIDANCE-004; Depends on: T075/T076; Blocks: T078. Verify section separation from official index, no synthetic species.
+- [X] T078 Tests: scoring policy, provider, vocabulary guard, no-official-index-as-input, deterministic output, unsupported-species exclusion, E2E; all v1.4 IDs; Depends on: T077; Blocks: T079.
+- [X] T079 Full verification gate + visual review + production check + analyze re-run; Depends on: T078; Blocks: T080.
+- [ ] T080 Commit/push main; verify Pages; Depends on: T079.
+
+US11-US14 are independently testable against fixture environment records; no v1.3/hotfix module (NAVER map, Worker, LiveOfficialFishingIndexProvider's KHOA parsing, Demo app) is rewritten.

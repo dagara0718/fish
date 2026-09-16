@@ -1,4 +1,5 @@
 import type { TrustStatus } from '../domain/contracts'
+import type { EnvironmentBasedSpeciesGuidance } from '../species-guidance/contracts'
 
 export type AssessmentType = 'OFFICIAL_FISHING_INDEX' | 'ENVIRONMENT_BASED_GUIDANCE'
 export type FishingType = '갯바위' | '선상'
@@ -50,7 +51,9 @@ export interface MarineEnvironmentSnapshot {
 }
 
 export type OfficialIndexResult =
-  | { kind: 'SUCCESS' | 'PARTIAL' | 'STALE_CACHE'; point: OfficialFishingPointRef; species: OfficialSpeciesIndex[]; environment: MarineEnvironmentSnapshot; demo: boolean }
+  // guidance is a separate, independently-sourced assessment (never computed from officialGrade/
+  // officialScore in this same result) — optional so Demo fixtures need not populate it.
+  | { kind: 'SUCCESS' | 'PARTIAL' | 'STALE_CACHE'; point: OfficialFishingPointRef; species: OfficialSpeciesIndex[]; environment: MarineEnvironmentSnapshot; demo: boolean; guidance?: EnvironmentBasedSpeciesGuidance[] }
   | { kind: 'COLLECTION_FAILED'; point: OfficialFishingPointRef; reason: string; demo: boolean }
   | { kind: 'UNSUPPORTED_POINT'; reason: string; demo: boolean }
 
