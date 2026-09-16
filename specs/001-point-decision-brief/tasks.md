@@ -156,7 +156,7 @@ User Story 1 and its tests establish safe target identity. User Story 2 consumes
 - [X] T055 [P] Add Playwright product/GPS/official-index tests and viewport screenshot capture in `e2e/product-ui.spec.ts`; Req: `SC-009~012`, Constitution XIII/XIV; Depends on: T054; Blocks: T056; Verify: 1440×900 and 390×844 flows pass, including permission error fallback and evidence focus return.
 - [X] T056 Review both screenshots against all eight visual-quality questions and record the result in `specs/001-point-decision-brief/v1.1-visual-review.md`; Req: `SC-012`; Design: §25-26; Depends on: T055; Blocks: T057; Verify: eight YES answers and root `DESIGN.md` hash unchanged.
 - [X] T057 Run typecheck, lint, Vitest, Playwright, production build and provider-secret/source scan; record results in `specs/001-point-decision-brief/validation-report.md`; Req: all existing and v1.1 requirements; Depends on: T056; Blocks: T058; Verify: every command exits 0 and no provider key/direct official request exists in `dist`.
-- [ ] T058 Review diff, commit normally to `main`, push without force, verify GitHub Pages deployment and deployed URL; Req: release acceptance; Depends on: T057; Blocks: final report; Verify: deployed SHA matches and live provider is reported `LIVE_API_MANUAL_CONFIGURATION_REQUIRED` until proxy/key approval.
+- [X] T058 Review diff, commit normally to `main`, push without force, verify GitHub Pages deployment and deployed URL; Req: release acceptance; Depends on: T057; Blocks: final report; Verify: deployed SHA matches and live provider is reported `LIVE_API_MANUAL_CONFIGURATION_REQUIRED` until proxy/key approval.
 
 ## v1.1 Deferred / Blocked
 

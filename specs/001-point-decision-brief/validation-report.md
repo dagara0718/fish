@@ -14,6 +14,9 @@
 - Visual review: PASS at 1440×900 and 390×844; see `v1.1-visual-review.md`.
 - Existing domain/data/observability modules: unchanged.
 - Live official API: not asserted; server-side proxy account and secret configuration remain manual.
+- Git/Pages: implementation commit `f88defaa9866d5ad9a558cb5c462957df7f2a4e2` pushed to `main`;
+  Actions run `35053682180` completed successfully; deployed HTML, JS and CSS returned HTTP 200 and the
+  bundle contains the new product shell and official-index UI.
 
 ---
 
