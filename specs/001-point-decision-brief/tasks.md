@@ -205,6 +205,15 @@ Both require the user's own credentials. No account or key was fabricated to clo
 - [X] T070 [US8,US9,US10] Wire access status + species summary into the detail panel; CSS for arbitrary marker, nearest-candidate list, access-status section in src/features/official-index/OfficialIndexPanel.tsx, src/styles/global.css; REQ-FUNC-SPECIES-001~002, REQ-NFR-DETAIL-001; Depends on: T068/T069; Blocks: T071.
 - [X] T071 Unit/E2E tests for arbitrary click, nearest ranking, marker/background disambiguation, access status never becoming ALLOWED without evidence, species summary wording; all v1.3 IDs; Depends on: T070; Blocks: T072. Preserve existing v1.2 tests.
 - [X] T072 Run typecheck/lint/Vitest/Worker/Playwright/build/secret scan; visual review desktop/mobile against the real NAVER SDK in production; re-run analyze; Depends on: T071; Blocks: T073.
-- [ ] T073 Commit/push main normally; verify Pages SHA/HTTP and real production map+click flow; Depends on: T072.
+- [X] T073 Commit/push main normally; verify Pages SHA/HTTP and real production map+click flow; Depends on: T072.
 
 US8 is independently testable with a mock SDK exposing map/marker click handlers. US9 is independently testable against the always-CHECK_REQUIRED provider. No v1.2 task or module is rewritten.
+
+## v1.3 status (2026-09-16)
+
+T067-T073 complete. Analyze: CRITICAL 0, HIGH 0 (specs/001-point-decision-brief/v1.3-analyze.md).
+Real NAVER SDK verified on both localhost and production (19 tiles, background click → arbitrary
+marker, no console errors). Live KHOA connection is still BLOCKED-KEY-KHOA (unchanged from v1.2) —
+map interaction, preview, nearest-reference UI, and fishing access status all work correctly without
+it; only the per-point official species/environment fetch degrades to a graceful "불러오지 못했습니다"
+message, never a fixture fallback.
