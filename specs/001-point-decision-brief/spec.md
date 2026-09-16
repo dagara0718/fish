@@ -21,7 +21,7 @@
 | OD-01 | 판단 브리프의 최소 정보세트는 무엇인가 | `PRODUCT_DECISION_REQUIRED` | 정확한 `info_type` 목록을 만들지 않고 가변 정보 슬롯으로 표현 | 제품 담당의 프로토타입 가설 승인 후, 구현 전 | SRS BRIEF-001, Open Decisions |
 | OD-02 | 데이터 유형별 freshness threshold는 얼마인가 | `PRODUCT_DECISION_REQUIRED` | 수치는 `TBD`; 정책 경계만 계획 가능 | 데이터 특성·POC 근거 승인 후, 경계 테스트 전 | SRS TRUST-002, NFR-PERF-002 |
 | OD-03 | 초기 POC 지원 포인트셋은 어디인가 | `PRODUCT_DECISION_REQUIRED` | 실제 지역·포인트를 확정하지 않고 fixture 기반 샘플만 허용 | POC 운영 범위 승인 후 | SRS Assumptions, Open Decisions |
-| OD-04 | 어떤 외부 공급자/API/라이선스를 쓰는가 | `ARCHITECTURE_TBD` | 공급자를 고르지 않고 source adapter 계약만 정의 | 비용·약관·데이터 조사 및 Architecture/ADR 승인 시 | SRS IF-DATA-SOURCE-ADAPTER |
+| OD-04 | 어떤 외부 공급자/API/라이선스를 쓰는가 | `PARTIALLY_RESOLVED_V1.1` | 국립해양조사원 바다낚시지수 계약·라이선스는 사용자 승인; live proxy 공급자/계정/secret 운영은 TBD | live 운영 승인 및 Architecture/ADR 시 | v1.1 user approval, official catalog 15142486 |
 | OD-05 | KPI 정량 목표는 얼마인가 | `DEFERRED_VALIDATION` | 계측 가능성만 요구하고 목표는 `TBD_AFTER_BASELINE` | baseline 측정 후 PRD 승인 시 | SRS NFR-PERF-001, Review |
 | OD-06 | 지도/검색/목록 중 어떤 UI 구조를 쓰는가 | `DESIGN_DECISION` | Search-first, Map-first, Hybrid를 다음 단계에서 비교 | Stitch/텍스트 와이어프레임 평가 시 | SRS Constraints, Open Decisions |
 | OD-07 | FR-03/FR-05는 어느 릴리스에서 활성화하는가 | `PRODUCT_DECISION_REQUIRED` | Should/Deferred로 유지하고 P1 의존성에서 제외 | 가치·운영 검증 후 PRD 승인 시 | SRS MVP Baseline |
@@ -254,7 +254,7 @@
 - 커뮤니티, 랭킹, 채팅, 거래, 장비 쇼핑 또는 장비 데이터베이스
 - 정확 GPS를 공개하는 소셜 기능
 - 전국 규제정보의 완전 보증 또는 모든 좌표의 법적 “낚시 가능” 판정
-- 실제 외부 공급자/API/지도 SDK 선택과 실연동
+- 승인된 국립해양조사원 계약을 제외한 외부 공급자/지도 SDK 선택과, server-side secret 경계 없는 실연동
 - 데이터베이스·프레임워크·CSS 구현 결정
 
 ## Success Criteria *(mandatory)*
@@ -285,7 +285,7 @@
 - 초기 검증은 fixture/mock과 제한 포인트셋으로 수행하고 전국 실시간 수집을 요구하지 않는다.
 - 외부 정보원은 누락, 지연, 실패, 오래됨, 충돌을 일으킬 수 있으며 이는 정상 모델 상태다.
 - 사용자 계정 또는 인증은 Must 흐름의 전제조건이 아니다.
-- 정확 GPS는 Must 흐름에 필요하지 않으며 기본적으로 저장하지 않는다.
+- 정확 GPS는 검색 Must 흐름에 필요하지 않으며 v1.1에서 사용자 행동으로만 일시 사용하고 저장하지 않는다.
 - 화면 구조는 Design 단계에서 결정하고, 공급자·저장·통신 방식은 Plan/Architecture 단계에서
   SRS 경계를 지키는 범위로 정한다.
 
@@ -296,7 +296,7 @@
 | OD-01 | 판단 브리프 최소 정보세트 | `PRODUCT_DECISION_REQUIRED` | 제품 담당 + 프로토타입 가설 승인 |
 | OD-02 | 데이터 유형별 freshness threshold | `PRODUCT_DECISION_REQUIRED` | 데이터 특성 및 POC 근거 승인 |
 | OD-03 | 초기 POC 지원 포인트셋 | `PRODUCT_DECISION_REQUIRED` | POC 운영 범위 승인 |
-| OD-04 | 외부 데이터 공급자/API/라이선스 | `PRODUCT_DECISION_REQUIRED` | 비용·약관·데이터 조사 승인 |
+| OD-04 | 공식 데이터 계약 / live proxy 운영 | KHOA 계약·라이선스 승인, live proxy `TBD` | 계정·secret·운영비 승인 및 ADR |
 | OD-05 | KPI 정량 목표 | `TBD_AFTER_BASELINE` | baseline 측정 후 PRD 승인 |
 | OD-06 | 지도/검색/목록 UI 구조 | Design 단계에서 결정 가능 | 사용자 흐름 비교 기록 |
 | OD-07 | FR-03/FR-05 활성 릴리스 | `DEFERRED_VALIDATION` | PRD Should 유지, 검증 결과 승인 |
@@ -328,3 +328,54 @@
 | `REQ-NFR-PRIV-002` | NFR-008 | Covered |
 | `REQ-NFR-COST-001` | NFR-009, SC-008 | Covered |
 | `REQ-NFR-COST-002` | NFR-010 | Covered |
+
+## v1.1 Addendum — 공식 바다낚시지수와 현재 위치 후보
+
+**Status**: Approved product delta; live provider configuration remains operationally blocked.
+
+### User Story 4 - 공식 어종별 낚시여건 확인 (Priority: P1)
+
+사용자는 자신이 명시적으로 선택한 공식 지원 포인트에 대해 국립해양조사원이 제공한 어종별
+바다낚시지수·점수(제공 시)·예측시각과 환경 관측 범위를 공식 결과로 확인한다. 공식 등급과
+시스템의 TrustStatus는 서로 독립적으로 표시된다.
+
+1. 공식 지원 포인트를 선택하면 `OFFICIAL_FISHING_INDEX` 결과만 표시한다.
+2. 공식 미지원 포인트에는 “공식 바다낚시지수 미지원 위치”를 표시하고 값을 만들지 않는다.
+3. 일부 필드 누락/timeout/error/과거 cache는 각각 부분, `COLLECTION_FAILED`, `STALE`로 정직하게
+   표현하며 기존 성공 항목을 숨기지 않는다.
+
+### User Story 5 - 현재 위치에서 공식 후보 찾기 (Priority: P1)
+
+사용자는 버튼을 누른 뒤 브라우저 위치권한을 허용해 주변 공식 포인트 후보를 거리와 함께 보고,
+공식 기준 포인트를 직접 선택한다. 권한 거부·기능 불가·후보 없음에도 검색 흐름은 유지된다.
+
+### New Functional Requirements
+
+- **FR-012**: 시스템은 공식 지원 포인트의 실제 provider 필드만 `OfficialSpeciesIndex`와
+  `MarineEnvironmentSnapshot.observations[]`로 변환해야 한다. **Source:** `REQ-FUNC-OFFICIAL-001`.
+- **FR-013**: 공식 등급/점수와 다섯 TrustStatus를 별도 의미로 표시해야 한다.
+  **Source:** `REQ-FUNC-OFFICIAL-002`.
+- **FR-014**: 현재 위치는 사용자 행동 후 요청하고 주변 후보를 자동 선택하지 않으며 GPS,
+  공식 기준 포인트, 방식, 거리, 확인 여부를 구분해야 한다. **Source:** `REQ-FUNC-LOCATION-001`.
+- **FR-015**: 위치 거부·불가·후보 없음은 검색을 방해하지 않는 명시적 상태여야 한다.
+  **Source:** `REQ-FUNC-LOCATION-002`.
+- **FR-016**: official 미지원, timeout/error, 일부 누락, stale cache를 fixture 실제값으로 숨기지
+  않아야 한다. **Source:** `REQ-FUNC-OFFICIAL-003`.
+- **FR-017**: `ENVIRONMENT_BASED_GUIDANCE`는 타입 예약만 허용하며 사용자 결과를 생성하지 않는다.
+  **Source:** `REQ-FUNC-OFFICIAL-004`.
+
+### New Non-Functional Requirements
+
+- **NFR-012**: provider secret은 source, `VITE_*`, bundle, URL, repository에 없어야 하며 live 호출은
+  server-side secret boundary로 제한한다. **Source:** `REQ-NFR-SEC-001`.
+- **NFR-013**: 정확 GPS는 메모리 내 후보 계산 외 저장·URL·로그·analytics에 남기지 않는다.
+  **Source:** `REQ-NFR-PRIV-003`.
+- **NFR-014**: provider 응답은 공식 스키마 경계에서 검증하고 알 수 없는/누락 필드를 확정값으로
+  만들지 않는다. **Source:** `REQ-NFR-DATA-003`.
+
+### v1.1 Success Criteria
+
+- **SC-009**: 공식/미지원/부분/실패/stale fixture의 100%에서 공식 결과와 TrustStatus가 혼동되지 않는다.
+- **SC-010**: GPS 허용/거부/불가/후보 없음의 100%에서 자동선택과 raw-coordinate 저장·계측이 없다.
+- **SC-011**: production bundle 및 repository secret scan에서 provider key가 0건이다.
+- **SC-012**: 1440×900과 390×844에서 검색→후보→브리프→근거가 제품 UI로 완결된다.

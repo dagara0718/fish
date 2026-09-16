@@ -45,6 +45,19 @@ CSS or a framework implementation.
 
 ## State fixtures required for component verification
 
+## v1.1 Product shell and official-index presentation
+
+- Desktop 1440×900 uses a 56–64px product header, one compact search surface, a 300–360px discovery column
+  and a flexible decision-brief region. No marketing hero or developer rule card appears in primary content.
+- Mobile 390×844 serializes search → candidates → selected brief; evidence is a full-width modal sheet.
+- A single header-level `DEMO DATA` disclosure identifies all synthetic content without repeating fixture
+  language on every card. QA-only scenarios live in a secondary disclosure.
+- Candidate rows show name, region/type, support state and selection affordance with full-row click target.
+- The official section displays official point, prediction time, species, official grade/score, TrustStatus and
+  evidence. It never says catch probability, recommendation, safety, permission or guaranteed conditions.
+- “현재 위치 사용” is secondary to search. Permission denied/unavailable/no candidate leaves search usable.
+
+
 `supported`, `duplicate`, `ambiguous`, `unsupported`, `catalog-unavailable`, `all-confirmed`,
 `partial`, `stale-cache`, `failure-with-cache`, `failure-without-cache`, `unverified`, `conflict`,
 `missing-provenance`, `loading`, and `empty-all`.

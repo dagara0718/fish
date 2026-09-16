@@ -1,5 +1,22 @@
 # Fixture MVP Validation Report
 
+## v1.1 validation — 2026-09-16
+
+- Analyze pass 1: CRITICAL 0, HIGH 3 (stale v1.0 scope language); remediated in spec/plan/design/tasks.
+- Analyze pass 2: CRITICAL 0, HIGH 0; all v1.1 requirements mapped to T046–T058.
+- Typecheck: PASS (`tsc -b --pretty false`).
+- Lint: PASS (`eslint .`).
+- Vitest: PASS, 12 files / 38 tests.
+- Playwright: PASS, 20 applicable / 6 project-condition skips / 0 failures.
+- Production build: PASS, Vite 8.3.0, `/fish/` base retained.
+- Secret/direct-provider scan: PASS; no `serviceKey`, `VITE_*KEY`, or direct official gateway endpoint in
+  `src`/`dist`.
+- Visual review: PASS at 1440×900 and 390×844; see `v1.1-visual-review.md`.
+- Existing domain/data/observability modules: unchanged.
+- Live official API: not asserted; server-side proxy account and secret configuration remain manual.
+
+---
+
 **Date**: 2026-09-16  
 **Scope**: Synthetic fixtures + fake adapters + in-memory repositories only  
 **Gate**: PASS

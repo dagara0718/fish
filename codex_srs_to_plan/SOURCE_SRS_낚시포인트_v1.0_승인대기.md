@@ -771,3 +771,22 @@ SRS 구조와 핵심 규칙은 PRD와 정합하며 **통합 검토본으로 진�
 ## 10. 최종 기준선 문장
 
 > 이 SRS는 ‘낚시 정보를 많이 보여주는 시스템’을 정의하지 않는다. **지원 포인트를 식별하고, 현재 사용 가능한 의사결정 정보를 신뢰상태와 함께 제공하며, 불확실하거나 충돌하는 정보를 확정사실처럼 승격하지 않는 시스템 동작**을 정의한다. 제품 범위는 PRD의 Must/Should를 그대로 따른다.
+
+## v1.1 승인 델타 (2026-09-16)
+
+사용자 승인으로 기존 ID를 변경하지 않고 다음 Must를 추가한다.
+
+- `REQ-FUNC-OFFICIAL-001`: 명시 선택한 공식 지원 포인트에서만 국립해양조사원 공식 어종별
+  지수·점수·예측시각과 실제 제공 환경 필드를 표시한다.
+- `REQ-FUNC-OFFICIAL-002`: 공식 등급/점수와 TrustStatus를 독립적으로 표시한다.
+- `REQ-FUNC-OFFICIAL-003`: 미지원·누락·timeout/error·stale cache를 실제값으로 위장하지 않는다.
+- `REQ-FUNC-OFFICIAL-004`: MVP는 `OFFICIAL_FISHING_INDEX`만 생성하고 자체 어종평가를 만들지 않는다.
+- `REQ-FUNC-LOCATION-001`: 사용자 행동 후 GPS를 요청하고 거리 후보를 보여주되 명시 선택 전
+  공식 포인트를 확정하지 않는다.
+- `REQ-FUNC-LOCATION-002`: 권한 거부·기능 불가·후보 없음에도 직접 검색을 유지한다.
+- `REQ-NFR-SEC-001`: provider key를 client/repository/URL에 노출하지 않고 server secret 경계를 사용한다.
+- `REQ-NFR-PRIV-003`: raw GPS를 영구저장·로그·analytics에 남기지 않는다.
+- `REQ-NFR-DATA-003`: 공식 응답을 검증하고 source/time/status 및 관측별 provenance를 보존한다.
+
+공식 API 필드와 운영 경계는 `contracts/official-fishing-index.md`가 추적한다. Live proxy 공급자,
+service key 등록과 운영 freshness 수치는 승인 전 TBD이며 데모 결과와 live 결과를 혼합하지 않는다.

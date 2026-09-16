@@ -19,8 +19,9 @@ Base `DESIGN.md` through Feature-specific `DESIGN_DECISIONS.md` and exposes evid
 
 The smallest fitting technical shape is one React/Vite/strict TypeScript SPA with plain CSS variables,
 Vitest/Testing Library, and representative Playwright E2E tests. Router, global state library, backend,
-database, map SDK, live provider, and persistent browser storage are deferred because the current Must flow
-does not require them. OD-01~05 and OD-07 remain approval boundaries; only OD-06 is decided as Search-first.
+database, map SDK, live provider proxy, and persistent browser storage are deferred. v1.1 adds an approved
+official-schema demo and opt-in transient GPS candidate flow. OD-01~03/05/07 and live OD-04 operations remain
+approval boundaries; OD-06 stays Search-first.
 
 ## Technical Context
 
@@ -47,7 +48,7 @@ calculate p50/p95. No target values before OD-05 baseline approval. A slow fake 
 successful sibling data; the production deadline value remains OD-02/architecture TBD.
 
 **Constraints**: Preserve source/time/status and competing evidence; no automatic match or `CONFIRMED`
-promotion; no legal/safety/fishing permission inference; no exact user GPS or unnecessary identifiers; no
+promotion; no legal/safety/fishing permission inference; no persisted/logged exact user GPS or unnecessary identifiers; no
 nationwide collection prerequisite; no Should dependency; no C-drive project dependency/cache/temp install.
 
 **Scale/Scope**: One Search-first feature, four primary UI regions, synthetic limited fixture catalog, and the
@@ -67,7 +68,7 @@ complete Must state matrix. Actual points, source fan-out, provider traffic, and
 | VI. Partial-failure-first | independent adapter settlement and failed-slot retry | PASS |
 | VII. Contract/Data first | `data-model.md` and `contracts/` precede logic phases | PASS |
 | VIII. Open decisions stay open | OD impact table blocks only dependent work | PASS |
-| IX. Privacy minimization | no auth/GPS/persistent storage; negative payload tests | PASS |
+| IX. Privacy minimization | no auth/persistent GPS storage; transient opt-in GPS negative payload tests | PASS |
 | X. Validation/observability | paired timing, source health/calls/results/cache metrics | PASS |
 | XI. Limited POC first | fixture Phase before blocked live adapter Phase | PASS |
 | XII. Design/Requirement separation | root Base Design unchanged; Feature decisions separate | PASS |
@@ -291,7 +292,7 @@ Exit: TC-POINT, TC-BRIEF, TC-TRUST, and domain NFR tests pass with fakes.
 - Build Search-first discovery/disambiguation, identity header, brief slots, TrustBadge, EvidencePanel, states,
   and scoped retry.
 - Apply responsive, keyboard, focus, live-region, non-color, and reduced-motion behavior.
-- Keep every sample visibly fixture-only and omit map/GPS/login/recommendation/share features.
+- Keep every sample visibly demo-only and omit map/login/recommendation/share features; GPS is opt-in candidate-only.
 
 Exit: component and accessibility contracts pass for every required state.
 
@@ -372,7 +373,7 @@ deadlines prove cancellation behavior without becoming an operational timeout de
 | OD-01 brief minimum set | open `info_type` + injected test-only BriefDefinition | Phase 5 actual content/catalog mapping |
 | OD-02 freshness/timeout | policy/deadline ports + symbolic tests; no production number | Phase 5 actual freshness and operational deadline |
 | OD-03 initial POC points | synthetic fixture point IDs only | Phase 5 real catalog |
-| OD-04 provider/API/license | fake provider-neutral adapter only | Phase 5 live integration/backend/persistence choice |
+| OD-04 provider/API/license | KHOA schema/license approved; demo adapter only | live proxy/account/secret choice |
 | OD-05 KPI targets | compute baseline p50/p95 and status interpretation measures | target-based release evaluation after Phase 4 baseline |
 | OD-06 UI structure | Search-first fixed in Feature Design | nothing; map/provider remains separate |
 | OD-07 Should release | compare/access excluded from core and listed Deferred | only their future feature phases |
@@ -394,3 +395,38 @@ deadlines prove cancellation behavior without becoming an operational timeout de
 
 No constitution violation is required. The selected single-app architecture is the simplest complete design;
 there are no exceptions to justify.
+
+## v1.1 Implementation Plan
+
+### Architecture delta
+
+Keep existing domain/data/observability modules unchanged. Add a separate `official-index` feature boundary:
+
+- `src/official-index/contracts.ts`: additive assessment, official point, environment and provider results.
+- `src/official-index/demo-provider.ts`: deterministic, visibly demo official-schema fixture.
+- `src/official-index/location-candidates.ts`: pure Haversine candidate ranking with no persistence/logging.
+- `src/features/official-index/*`: geolocation action, candidate confirmation, environment/species presentation.
+- Existing `TrustStatus` is imported and reused; official score does not enter trust logic.
+
+The production client contains no provider key and no official direct-call adapter. Future live enablement adds
+one approved server-side proxy behind the same provider result contract. No serverless vendor is selected in
+this release.
+
+### Delivery phases
+
+1. Add v1.1 contracts and privacy/contract tests.
+2. Add GPS candidate calculation and denied/unavailable/no-candidate tests.
+3. Refactor presentation shell without changing existing domain/data/observability semantics.
+4. Add demo official-index section, failure/stale/missing-field fixtures and UI tests.
+5. Run existing regression plus typecheck/lint/Vitest/Playwright/build and inspect 1440×900 and 390×844.
+6. Deploy Pages. Live provider remains `LIVE_API_MANUAL_CONFIGURATION_REQUIRED` until proxy/key approval.
+
+### v1.1 requirement mapping
+
+| Requirement | Module | Verification |
+|---|---|---|
+| `REQ-FUNC-OFFICIAL-001~004` | official contracts/demo provider/UI | contract, component, E2E |
+| `REQ-FUNC-LOCATION-001~002` | location candidates/GPS UI | unit, denied/unavailable E2E |
+| `REQ-NFR-SEC-001` | no-live-client boundary | source/bundle secret scan |
+| `REQ-NFR-PRIV-003` | transient GPS controller | privacy payload and storage spy tests |
+| `REQ-NFR-DATA-003` | official result parser boundary | malformed/missing-field tests |

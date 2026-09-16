@@ -232,12 +232,57 @@ state meaning survives color removal.
 
 ## Unresolved by design
 
+## v1.1 Research — 국립해양조사원 바다낚시지수
+
+### Decision 19 — Official operation and schema
+
+The official public-data catalog `15142486` documents
+`GET https://apis.data.go.kr/1192136/fcstFishingv2/GetFcstFishingApiServicev2`. Required parameters are
+`serviceKey`, `type`, and `gubun`; optional parameters are `reqDate`, pagination, include/exclude and
+`placeName`. The response schema exposes location name/coordinates, prediction date/time, target species,
+official index/score, tide score/content and min/max wave height, water/air temperature, current speed and
+wind speed. It describes a seven-day forecast. No stable provider point ID or update cadence is documented,
+so both remain service-catalog mapping/TBD rather than invented fields.
+
+### Decision 20 — Provider security boundary
+
+The public gateway returned origin-specific CORS headers for the Pages origin, but the authentication key is
+a required query parameter. Browser CORS compatibility does not protect the secret. GitHub Pages therefore
+uses a demo provider only. Live enablement requires an approved server-side proxy with secret storage,
+request allowlisting, schema validation, timeout/quota control and attribution. Cloudflare Workers, Vercel
+Functions and Netlify Functions are viable small boundaries, but selecting one requires the user's account,
+deployment and secret-management approval; no vendor is chosen now.
+
+### Decision 21 — GPS candidate mapping is local and confirmatory
+
+Browser Geolocation is requested only from a button. Raw coordinates remain in transient memory and are
+used only for Haversine distance to known official-point references. The result is a ranked candidate list,
+not a resolved point. The user must select a candidate. No coordinate enters storage, URLs, telemetry or
+errors. Permission denied/unavailable/no-nearby-point returns a recoverable UI state.
+
+### Decision 22 — Official assessment and trust are orthogonal
+
+`totalIndex`/`lastScr` are provider assessment fields; TrustStatus describes evidence freshness and collection
+quality. A “좋음” official grade may be `STALE`. Environment metrics are per-observation records because their
+time/source/status can differ. `ENVIRONMENT_BASED_GUIDANCE` is a reserved discriminator only and cannot be
+emitted by the v1.1 application.
+
+### Official operational facts
+
+- License: 공공저작물 출처표시 제1유형; free.
+- Development traffic: 10,000; production increase requires review/use-case registration.
+- Documented result codes: success; `03` no data; `10` invalid parameter; `11` missing parameter; `99` other,
+  plus portal gateway application/HTTP/timeout/auth/quota errors.
+- Catalog created 2025-03-19 and modified 2026-07-10.
+- Update frequency: `TBD_PROVIDER_CONFIRMATION`.
+
+
 | Decision | Research boundary |
 |---|---|
 | OD-01 brief fields | Open identifier and injected fixture definition only |
 | OD-02 freshness/timeout values | Injectable interface and symbolic boundary tests only |
 | OD-03 POC points | Synthetic fixture IDs only |
-| OD-04 providers/licenses | Provider-neutral adapter and fake sources only |
+| OD-04 providers/licenses | KHOA schema/license approved for v1.1; live proxy/account/secret remains TBD |
 | OD-05 KPI targets | Events and p50/p95 calculation only; `TBD_AFTER_BASELINE` |
 | OD-06 UI structure | Search-first decided; map/API not selected |
 | OD-07 Should release | Comparison/access remain deferred and create no core dependency |

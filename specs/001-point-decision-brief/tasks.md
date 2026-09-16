@@ -2,7 +2,9 @@
 
 **Input**: `spec.md`, `plan.md`, `data-model.md`, `contracts/`, `research.md`, `quickstart.md`, `DESIGN_DECISIONS.md`, constitution, read-only root `DESIGN.md`
 
-**Scope**: Synthetic fixture + fake adapter browser MVP only. `REQ-FUNC-COMPARE-001`, `REQ-FUNC-ACCESS-001`, live providers, real points, production freshness values, backend, database, map, GPS, login, recommendation, and permission decisions remain deferred or blocked.
+**Scope**: Synthetic fixture + fake adapter browser MVP plus the approved v1.1 official-schema demo and opt-in
+GPS candidate flow. `REQ-FUNC-COMPARE-001`, `REQ-FUNC-ACCESS-001`, live provider proxy/key, production
+freshness values, database, map, login, recommendation, and automatic permission decisions remain deferred.
 
 **Task metadata convention**: Every task names its Requirement IDs, owning design section where applicable, exact files, dependencies/blocks, and verification evidence.
 
@@ -133,5 +135,37 @@ User Story 1 and its tests establish safe target identity. User Story 2 consumes
 6. Publish only after typecheck, lint, tests, E2E and build pass.
 
 ## Task Format Validation
+
+## Phase 10: v1.1 Contracts and Security Foundation
+
+- [X] T046 [P] [US4] Add contract tests for `AssessmentType`, official species/environment records, provider outcomes, missing fields and official-grade/TrustStatus independence in `tests/contract/official-index-contract.test.ts`; Req: `REQ-FUNC-OFFICIAL-001~004`, `REQ-NFR-DATA-003`; Depends on: T045; Blocks: T047-T049; Verify: no `ENVIRONMENT_BASED_GUIDANCE` result and no grade-driven trust promotion.
+- [X] T047 [US4] Implement additive official-index contracts and guarded demo provider in `src/official-index/contracts.ts` and `src/official-index/demo-provider.ts`; Req: `REQ-FUNC-OFFICIAL-001~004`, `REQ-NFR-DATA-003`; Depends on: T046; Blocks: T050/T054; Verify: T046 passes and all content is explicitly DEMO provenance.
+- [X] T048 [P] [US5] Add privacy and mapping tests for Haversine candidates, no auto-selection and absence of raw GPS in durable/event payloads in `tests/unit/location-candidates.test.ts` and `tests/contract/privacy-contract.test.ts`; Req: `REQ-FUNC-LOCATION-001~002`, `REQ-NFR-PRIV-003`; Depends on: T045; Blocks: T049; Verify: exact coordinates never appear in returned candidates or telemetry.
+- [X] T049 [US5] Implement pure location candidate ranking and transient browser-geolocation controller boundary in `src/official-index/location-candidates.ts` and `src/features/official-index/UseCurrentLocation.tsx`; Req: `REQ-FUNC-LOCATION-001~002`, `REQ-NFR-PRIV-003`; Depends on: T048; Blocks: T052-T054; Verify: denied/unavailable/no-candidate preserve manual search and no candidate auto-selects.
+
+## Phase 11: v1.1 Presentation Refactor
+
+- [X] T050 [P] [US4] Write product-shell, polished candidate-row, official-section and demo-disclosure component tests in `tests/component/product-shell.test.tsx` and `tests/component/official-index.test.tsx`; Req: all v1.1 functional requirements plus existing Must regression; Design: `DESIGN_DECISIONS.md` §25-26; Depends on: T047; Blocks: T051-T054; Verify: primary UI contains no internal OD/test-harness copy and preserves accessible names.
+- [X] T051 [US1] Refactor the compact app header, search surface, discovery rail, clean empty state and candidate rows in `src/app/App.tsx`, `src/features/point-discovery/*`, `src/styles/*`; Req: `REQ-FUNC-POINT-001~003`, `REQ-NFR-PRIV-003`; Depends on: T050; Blocks: T052-T055; Verify: explicit selection, unsupported/ambiguous/catalog states and keyboard navigation remain unchanged.
+- [X] T052 [US4] Refactor the decision brief hierarchy and add environment/official species presentation in `src/features/decision-brief/*` and `src/features/official-index/*`; Req: `REQ-FUNC-BRIEF-001~003`, `REQ-FUNC-TRUST-001~005`, `REQ-FUNC-OFFICIAL-001~004`; Depends on: T049-T051; Blocks: T053-T056; Verify: source/time/status/evidence and all five TrustStatus states remain accessible.
+- [X] T053 [US5] Integrate current-location candidate confirmation into the reducer/controller without persistence or observability payload changes in `src/app/app-state.ts` and `src/app/App.tsx`; Req: `REQ-FUNC-LOCATION-001~002`, `REQ-NFR-PRIV-003`; Depends on: T049/T052; Blocks: T054-T056; Verify: user action is required for both permission and final point selection.
+- [X] T054 [US4] Add integration tests for official supported/unsupported, partial, collection failure, stale, GPS denied/unavailable/no-candidate and existing flow regression in `tests/integration/official-index-flow.test.tsx`; Req: all v1.1 requirements; Depends on: T047/T050/T053; Blocks: T055-T058; Verify: demo never masquerades as live and successful sibling data remains visible.
+
+## Phase 12: v1.1 Visual / Release Gate
+
+- [X] T055 [P] Add Playwright product/GPS/official-index tests and viewport screenshot capture in `e2e/product-ui.spec.ts`; Req: `SC-009~012`, Constitution XIII/XIV; Depends on: T054; Blocks: T056; Verify: 1440×900 and 390×844 flows pass, including permission error fallback and evidence focus return.
+- [X] T056 Review both screenshots against all eight visual-quality questions and record the result in `specs/001-point-decision-brief/v1.1-visual-review.md`; Req: `SC-012`; Design: §25-26; Depends on: T055; Blocks: T057; Verify: eight YES answers and root `DESIGN.md` hash unchanged.
+- [X] T057 Run typecheck, lint, Vitest, Playwright, production build and provider-secret/source scan; record results in `specs/001-point-decision-brief/validation-report.md`; Req: all existing and v1.1 requirements; Depends on: T056; Blocks: T058; Verify: every command exits 0 and no provider key/direct official request exists in `dist`.
+- [ ] T058 Review diff, commit normally to `main`, push without force, verify GitHub Pages deployment and deployed URL; Req: release acceptance; Depends on: T057; Blocks: final report; Verify: deployed SHA matches and live provider is reported `LIVE_API_MANUAL_CONFIGURATION_REQUIRED` until proxy/key approval.
+
+## v1.1 Deferred / Blocked
+
+- [ ] TBD-04 [BLOCKED: account/secret/operations approval] Select and deploy a server-side proxy provider, register the public-data key as a server secret, confirm production rate/update policy and validate live responses; Req: `REQ-NFR-SEC-001`; Files: future ADR and deployment project; Depends on: explicit user infrastructure approval; Verify: no secret reaches the Pages client.
+
+### v1.1 Dependencies
+
+T046/T048 can run independently; T047 and T049 complete the contract/data layer before T050-T054 UI and
+integration. T055-T058 are strictly sequential release gates. US4 is independently testable with a searched
+demo official point; US5 is independently testable by injecting browser geolocation outcomes.
 
 All executable tasks use `- [ ] T### [P?] [US?] Description` with exact files, Requirement IDs, design references where applicable, dependencies/blocks and verification. Deferred decisions use explicit `TBD`/`BLOCKED` identifiers and are not prerequisites for Must delivery.

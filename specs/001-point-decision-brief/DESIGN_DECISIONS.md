@@ -48,7 +48,8 @@ SRS와 Base Design이 충돌하면 SRS의 신뢰상태·안전·접근성 요구
 
 첫 화면의 주 행동은 포인트명·지역 검색이다. 결과는 구분 맥락이 있는 후보 목록으로 나타나며,
 사용자가 명시적으로 선택한 뒤 판단 브리프로 이동한다. 공간 맥락은 선택적 소형 보조정보일 수
-있지만 핵심 화면, 외부 지도 서비스, 위치권한에 의존하지 않는다.
+있지만 핵심 화면이나 외부 지도 서비스에 의존하지 않는다. v1.1 위치권한은 사용자가 secondary
+action을 누른 경우에만 주변 공식 후보를 찾는 보조 진입점으로 사용한다.
 
 ### 선택 이유와 대안 비교
 
@@ -221,7 +222,7 @@ SRS와 Base Design이 충돌하면 SRS의 신뢰상태·안전·접근성 요구
 - 후보 선택 후 브리프 상단에 “검색 결과로 돌아가기”를 제공하고 입력·scroll 문맥을 보존한다.
 - 슬롯 grid는 한 열의 label/value/status/time/근거 순으로 재배치한다.
 - 근거 side panel은 full-height bottom sheet가 되며 swipe만이 아닌 닫기 button을 제공한다.
-- 공간 맥락은 P1에서 생략 가능하고 위치권한을 요구하지 않는다.
+- 공간 맥락은 기본 검색에서 생략 가능하다. v1.1 현재 위치 후보는 명시 행동 후에만 권한을 요청한다.
 
 ## 17. 키보드·포커스·스크린리더
 
@@ -260,7 +261,7 @@ SRS와 Base Design이 충돌하면 SRS의 신뢰상태·안전·접근성 요구
 - 출처·시각·상태가 모두 사라진 핵심 값
 - 동일명 검색의 첫 결과 자동선택
 - Coinbase/암호화폐 브랜드 문구·로고·거래 그래픽
-- 기본 정확 GPS 권한 요청, 저장 또는 공개
+- 초기 화면의 자동 GPS 권한 요청, 정확 GPS 저장 또는 공개
 - 전국 지도 커버리지나 법적 가능을 암시하는 표현
 
 ## 21. Design에서 확정하지 않는 사항
@@ -270,7 +271,7 @@ SRS와 Base Design이 충돌하면 SRS의 신뢰상태·안전·접근성 요구
 | OD-01 실제 판단 브리프 `info_type` 목록 | `PRODUCT_DECISION_REQUIRED` |
 | OD-02 freshness threshold 숫자 | `PRODUCT_DECISION_REQUIRED` |
 | OD-03 실제 POC 포인트명/지역 | `PRODUCT_DECISION_REQUIRED` |
-| OD-04 외부 공급자·API endpoint·라이선스 | `ARCHITECTURE_TBD` / Not a Design Decision |
+| OD-04 공식 API 계약·라이선스 | KHOA catalog 15142486 승인 / live proxy 공급자는 `ARCHITECTURE_TBD` |
 | OD-05 KPI 목표 수치 | `TBD_AFTER_BASELINE` |
 | OD-07 FR-03/FR-05 활성 릴리스 | `DEFERRED_VALIDATION` / Not a Design Decision |
 
@@ -293,7 +294,7 @@ SRS와 Base Design이 충돌하면 SRS의 신뢰상태·안전·접근성 요구
 | `REQ-NFR-AVAIL-001` | stale cache label/time | mono time, badge | 캐시 신선도 왜곡 금지 |
 | `REQ-NFR-DATA-001` | BriefSlot→EvidencePanel 연결 | progressive disclosure | 메타데이터 유실 금지 |
 | `REQ-NFR-DATA-002` | conflict evidence list | equal-weight data rows | 원본 보존 |
-| `REQ-NFR-PRIV-001~002` | 위치권한 없는 Search-first | input and navigation | 정확 GPS 기본 저장 없음 |
+| `REQ-NFR-PRIV-001~003` | Search-first + opt-in 현재 위치 후보 | input and navigation | 정확 GPS 저장·계측 없음 |
 | `REQ-NFR-COST-002` | 지도 비의존 구조 | simple responsive grid | 제한 POC 우선 |
 
 ## 23. 구현 후 디자인 검증 체크리스트
@@ -321,3 +322,22 @@ SRS와 Base Design이 충돌하면 SRS의 신뢰상태·안전·접근성 요구
 OD-06은 Search-first로 결정한다. 검색과 후보 식별을 P1의 진입점으로 두고, 명시적 선택 뒤
 data-driven 브리프와 근거 상세을 제공한다. 공간 맥락은 핵심 의존성이 아니며 실제 지도/API
 결정은 하지 않았다. Base `DESIGN.md`는 변경하지 않았고 이 문서가 Feature별 적용 규칙을 소유한다.
+
+## 25. v1.1 Presentation Refactor
+
+기존 fixture 하네스형 hero/설명 sidebar를 제거하고 실제 앱 shell로 재구성한다. 64px header에는
+중립 서비스명, 작은 `DEMO DATA` badge와 데이터 안내만 둔다. 검색은 compact action surface이며,
+데스크톱 본문은 320px discovery rail과 유연한 brief workspace로 구성한다. 첫 화면은 오류가 아닌
+지원 예시 chip과 중립 empty state를 보이며 QA 전용 문자열은 접힌 도움말로 분리한다.
+
+브리프는 identity/availability/time header, 2~3열 정보 카드, 공식 어종별 지수 섹션, 근거 action의
+계층을 사용한다. hairline, white/soft-gray canvas, 희소한 blue action, tabular number를 적용하고
+shadow와 빈 공간을 최소화한다. 모바일은 압축 sidebar가 아니라 직렬 흐름이며 evidence는 full-width
+sheet다. `DESIGN.md`는 계속 읽기 전용이며 브랜드·로고·거래 UI를 복제하지 않는다.
+
+## 26. 현재 위치와 공식 데이터 UI
+
+“현재 위치 사용”은 검색 옆 secondary action이다. 권한 후 거리순 공식 후보를 보이되 자동 선택하지
+않고 거리·공식 기준 포인트·mapping method를 설명한다. 공식 등급과 TrustStatus는 각각 label을
+가져야 하며 green을 낚시 가능 의미로 쓰지 않는다. 미지원은 “공식 바다낚시지수 미지원 위치”로
+표시한다. demo/live provenance는 header 안내와 섹션 source에서 명확히 구분한다.

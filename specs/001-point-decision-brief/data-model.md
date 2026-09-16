@@ -196,6 +196,50 @@ DecisionBrief 1 ── * source outcome summaries
 
 ## Requirement Trace
 
+## v1.1 Additive Entities
+
+### AssessmentType
+
+Closed union: `OFFICIAL_FISHING_INDEX | ENVIRONMENT_BASED_GUIDANCE`. Only the first is constructible as a
+user result in v1.1.
+
+### OfficialFishingPointRef
+
+Service-owned `officialPointId`, provider `placeName`, `latitude`, `longitude`, `fishingType`, display region
+and source identity. The provider schema exposes no stable ID, so the service ID must never be presented as a
+provider-issued identifier.
+
+### LocationCandidate
+
+Contains `point`, `mappingMethod: DISTANCE_CANDIDATE`, `distanceKm`, and `userConfirmed: false`. It stores no
+raw user coordinate and cannot be converted into a selected point without a separate user action.
+
+### OfficialSpeciesIndex
+
+Contains `assessmentType: OFFICIAL_FISHING_INDEX`, provider species identity/name, official grade,
+optional official score, evaluated/prediction time, official point reference, source evidence and one of the
+existing five TrustStatus values. Official score and TrustStatus are not convertible to each other.
+
+### MarineEnvironmentSnapshot / EnvironmentalObservation
+
+Snapshot contains official point reference and `observations[]`. Each observation owns metric type, value,
+unit, observed/forecast time, source timestamp/evidence and TrustStatus. Wave, temperature, tide, current,
+air temperature and wind are separate observations; missing provider fields create no fabricated value.
+
+### OfficialIndexResult
+
+Discriminated outcomes: `SUCCESS`, `PARTIAL`, `STALE_CACHE`, `COLLECTION_FAILED`, `UNSUPPORTED_POINT`,
+`MALFORMED`. Demo/live provenance is explicit and never merged invisibly.
+
+### v1.1 Invariants
+
+- No automatic nearest-point selection and no `userConfirmed: true` without a user event.
+- Raw GPS is absent from persisted/domain/observability payloads.
+- Only official response fields become official species/environment records.
+- Provider failure cannot substitute fixture data in live mode.
+- Official grade/score never promotes TrustStatus to `CONFIRMED`.
+
+
 | Model boundary | Requirements |
 |---|---|
 | FishingPoint / PointLookupResult | `REQ-FUNC-POINT-001~003` |
