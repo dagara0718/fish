@@ -7,11 +7,22 @@ export function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('MALFORMED_RESPONSE')
   return value as Record<string, unknown>
 }
-export function validDate(date: string): boolean {
-  if (!/^\d{8}$/.test(date)) return false
-  const iso = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
+function isRealCalendarDate(iso: string): boolean {
   const parsed = new Date(`${iso}T00:00:00Z`)
   return Number.isFinite(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === iso
+}
+// Strict request-parameter format (reqDate=YYYYMMDD). Never relax this for the outgoing request.
+export function validDate(date: string): boolean {
+  if (!/^\d{8}$/.test(date)) return false
+  return isRealCalendarDate(`${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`)
+}
+// The real upstream response ships predcYmd as YYYY-MM-DD (confirmed 2026-09-16), not the
+// request's YYYYMMDD. Accept both on the response side and normalize to YYYYMMDD internally so
+// every date comparison in the app stays a same-format string compare.
+export function normalizeResponseDate(date: string): string | undefined {
+  if (/^\d{8}$/.test(date)) return validDate(date) ? date : undefined
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return isRealCalendarDate(date) ? date.replaceAll('-', '') : undefined
+  return undefined
 }
 export function parseItem(value: unknown): OfficialItem {
   const input = object(value); const item: OfficialItem = {}
@@ -30,7 +41,11 @@ export function parseItem(value: unknown): OfficialItem {
     item[field] = n
   }
   if ((item.lat !== undefined && Math.abs(item.lat) > 90) || (item.lot !== undefined && Math.abs(item.lot) > 180)) throw new Error('MALFORMED_RESPONSE')
-  if (item.predcYmd && !validDate(item.predcYmd)) throw new Error('MALFORMED_RESPONSE')
+  if (item.predcYmd) {
+    const normalized = normalizeResponseDate(item.predcYmd)
+    if (!normalized) throw new Error('MALFORMED_RESPONSE')
+    item.predcYmd = normalized
+  }
   return item
 }
 export function parseOfficialResponse(value: unknown, fetchedAt: string): FishingEnvelope {

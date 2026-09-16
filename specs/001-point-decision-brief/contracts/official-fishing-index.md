@@ -63,3 +63,25 @@ only long enough to compute Haversine distance against the demo/approved catalog
 placed in URLs, events, analytics or error text. Candidate output contains official point identity, mapping
 method `DISTANCE_CANDIDATE`, distance and `userConfirmed: false`. No candidate is auto-selected.
 
+
+## Real-response correction (confirmed 2026-09-16)
+
+Verified against a live authenticated call, not documentation guesswork:
+
+- `predcYmd` in the real response is `YYYY-MM-DD` (e.g. `2026-09-16`), not the `YYYYMMDD` the request's
+  `reqDate` uses. `shared/fishing-api.ts` accepts both on the response side and normalizes to
+  `YYYYMMDD` internally so every date comparison stays a same-format string compare; the request-side
+  `reqDate` validator stays strict `YYYYMMDD` only. Display reformats the canonical value back to
+  `YYYY-MM-DD` for readability.
+- `lastScr` is absent on real items (confirmed across a full 300-row page, 6+ species per point, 2
+  time periods). It is not part of the SUCCESS/PARTIAL determination; `officialScore` in the UI is
+  omitted whenever the field is absent, never shown as `0`.
+- Real species observed for 가거도 on 2026-09-16: 감성돔, 기타어종, 농어, 돌돔, 우럭, 참돔.
+- The Worker's outbound `fetch` must use `redirect: 'manual'`. The Workers runtime throws a
+  `TypeError` on `redirect: 'error'` (a valid `fetch()` value in browsers/Node, unsupported at the
+  edge); `'manual'` returns any 3xx as a non-`ok` response, which the existing `!response.ok` guard
+  already rejects, preserving the original "never silently follow a redirect" intent.
+- The Worker's default `deps.fetch` must be a bound wrapper (`(input, init) => globalThis.fetch(input,
+  init)`), not a bare `fetch` reference — the same "Illegal invocation" class of bug fixed earlier in
+  `LiveOfficialFishingIndexProvider`, here on the server side. A bare reference throws when invoked as
+  `deps.fetch(...)` because the receiver becomes `deps`, not the global.

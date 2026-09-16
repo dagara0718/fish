@@ -12,7 +12,9 @@ function pointFrom(item: OfficialItem, fishingType: FishingType): OfficialFishin
 export function normalizeOfficial(items: OfficialItem[], point: OfficialFishingPointRef, today = seoulDate()): OfficialIndexResult {
   const records = items.filter(item => item.seafsPstnNm === point.placeName && item.lat === point.latitude && item.lot === point.longitude)
   if (!records.length) return { kind: 'UNSUPPORTED_POINT', reason: '공식 바다낚시지수 데이터가 없습니다.', demo: false }
-  const time = (item: OfficialItem) => `${item.predcYmd ?? '기준일 미확인'} · ${item.predcNoonSeCd ?? '시간구분 미확인'}`
+  // predcYmd is normalized to YYYYMMDD by parseItem; reformat only for display.
+  const formatDate = (ymd?: string) => ymd ? `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}` : '기준일 미확인'
+  const time = (item: OfficialItem) => `${formatDate(item.predcYmd)} · ${item.predcNoonSeCd ?? '시간구분 미확인'}`
   const trust = (item: OfficialItem): TrustStatus => {
     const siblings = records.filter(other => other.seafsTgfshNm === item.seafsTgfshNm && other.predcYmd === item.predcYmd && other.predcNoonSeCd === item.predcNoonSeCd)
     if (siblings.some(other => JSON.stringify(other) !== JSON.stringify(item))) return 'CONFLICT'
@@ -25,7 +27,8 @@ export function normalizeOfficial(items: OfficialItem[], point: OfficialFishingP
     for (const [metricType, label, min, max] of ranges) if (min !== undefined || max !== undefined) observations.push({ metricType, label, value: `${min ?? '미제공'} ~ ${max ?? '미제공'}`, unit: '단위 미확인', forecastAt: time(item), source, sourceTimestamp: time(item), trustStatus: trust(item) })
     if (item.tdlvHrCn) observations.push({ metricType: 'TIDE', label: '물때', value: item.tdlvHrCn, forecastAt: time(item), source, sourceTimestamp: time(item), trustStatus: trust(item) })
   }
-  const partial = records.some(item => !item.seafsTgfshNm || !item.totalIndex || item.lastScr === undefined || !item.predcYmd || !item.predcNoonSeCd)
+  // lastScr is confirmed absent on real responses (2026-09-16 sample); it is not a SUCCESS requirement.
+  const partial = records.some(item => !item.seafsTgfshNm || !item.totalIndex || !item.predcYmd || !item.predcNoonSeCd)
   return { kind: records.every(item => trust(item) === 'STALE') ? 'STALE_CACHE' : partial ? 'PARTIAL' : 'SUCCESS', point, species, environment: { locationReference: point, evaluatedAt: time(records[0]!), observations: observations.filter((item, index, all) => all.findIndex(other => JSON.stringify(other) === JSON.stringify(item)) === index) }, demo: false }
 }
 export class LiveOfficialFishingIndexProvider implements OfficialFishingIndexProvider {

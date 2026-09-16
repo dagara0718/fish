@@ -7,7 +7,11 @@ const upstream = 'https://apis.data.go.kr/1192136/fcstFishingv2/GetFcstFishingAp
 const origins = new Set(['https://dagara0718.github.io', 'http://localhost:5173', 'http://127.0.0.1:5173'])
 const params = new Set(['gubun', 'reqDate', 'placeName', 'pageNo', 'numOfRows'])
 
-export async function handleRequest(request: Request, env: Env, deps: Dependencies = { fetch, now: () => new Date() }): Promise<Response> {
+// Bound wrapper: a bare `fetch` reference loses its receiver when called as deps.fetch(...) and
+// throws "Illegal invocation" in the Workers runtime (same class of bug fixed in the frontend
+// LiveOfficialFishingIndexProvider).
+const boundFetch: typeof fetch = (input, init) => globalThis.fetch(input, init)
+export async function handleRequest(request: Request, env: Env, deps: Dependencies = { fetch: boundFetch, now: () => new Date() }): Promise<Response> {
   const origin = request.headers.get('Origin') ?? ''
   const headers: Record<string, string> = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', Vary: 'Origin', 'X-Content-Type-Options': 'nosniff' }
   const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers })
@@ -43,7 +47,9 @@ export async function handleRequest(request: Request, env: Env, deps: Dependenci
   remote.searchParams.set('serviceKey', secret)
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10_000)
   try {
-    const response = await deps.fetch(remote, { signal: controller.signal, redirect: 'error', headers: { Accept: 'application/json' } })
+    // Workers' fetch only supports redirect 'follow'|'manual' ('error' throws a TypeError at the
+    // edge). 'manual' returns the 3xx as-is, which the response.ok check below already rejects.
+    const response = await deps.fetch(remote, { signal: controller.signal, redirect: 'manual', headers: { Accept: 'application/json' } })
     if (!response.ok) return reply(502, { error: 'UPSTREAM_ERROR' })
     if (!response.headers.get('Content-Type')?.toLowerCase().includes('application/json')) return reply(502, { error: 'MALFORMED_RESPONSE' })
     const body = await response.text()
@@ -60,5 +66,5 @@ export async function handleRequest(request: Request, env: Env, deps: Dependenci
 
 export default { fetch(request: Request, env: Env) {
   const storage = caches as CacheStorage & { default: Cache }
-  return handleRequest(request, env, { fetch, cache: storage.default, now: () => new Date() })
+  return handleRequest(request, env, { fetch: boundFetch, cache: storage.default, now: () => new Date() })
 } }

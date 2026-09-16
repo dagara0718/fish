@@ -13,8 +13,26 @@ describe('Worker security boundary', () => {
     expect(url.origin).toBe('https://apis.data.go.kr'); expect(url.searchParams.get('serviceKey')).toBe(key)
     expect(await response.text()).not.toContain(key)
   })
-  it.each(['gubun=other', 'gubun=선상&reqDate=20260230', 'gubun=선상&numOfRows=301', 'gubun=선상&serviceKey=bad', 'gubun=선상&url=https://evil.example', 'gubun=선상&gubun=갯바위'])('rejects %s', async query => {
+  it("uses redirect 'manual', not 'error' (the Workers runtime rejects 'error' with a TypeError)", async () => {
+    const d = deps(); await handleRequest(make(), env, d)
+    expect(d.fetch.mock.calls[0]![1]?.redirect).toBe('manual')
+  })
+  it('fails closed on an upstream redirect instead of following it', async () => {
+    const d = deps(); d.fetch.mockResolvedValue(new Response(null, { status: 302, headers: { Location: 'https://evil.example' } }))
+    expect((await handleRequest(make(), env, d)).status).toBe(502)
+  })
+  it.each(['gubun=other', 'gubun=선상&reqDate=20260230', 'gubun=선상&reqDate=2026-09-16', 'gubun=선상&numOfRows=301', 'gubun=선상&serviceKey=bad', 'gubun=선상&url=https://evil.example', 'gubun=선상&gubun=갯바위'])('rejects %s', async query => {
     const d = deps(); expect((await handleRequest(make(query), env, d)).status).toBe(400); expect(d.fetch).not.toHaveBeenCalled()
+  })
+  it('accepts the real upstream response shape (dashed predcYmd, no lastScr) and normalizes the date', async () => {
+    const real = { header: { resultCode: '00' }, body: { totalCount: 1750, items: { item: [{ seafsPstnNm: '가거도', lat: 34.07308, lot: 125.08805, predcYmd: '2026-09-16', predcNoonSeCd: '오전', seafsTgfshNm: '감성돔', totalIndex: '좋음' }] } } }
+    const d = deps(); d.fetch.mockResolvedValue(Response.json(real))
+    const response = await handleRequest(make(), env, d)
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data.totalCount).toBe(1750)
+    expect(data.items[0].predcYmd).toBe('20260916')
+    expect(data.items[0].lastScr).toBeUndefined()
   })
   it('rejects foreign origin and missing secret', async () => {
     expect((await handleRequest(make(undefined, 'https://evil.example'), env, deps())).status).toBe(403)
@@ -27,6 +45,21 @@ describe('Worker security boundary', () => {
   it.each([Response.json({ header: { resultCode: '99', resultMsg: key } }), new Response(key, { status: 500 }), new Response(key, { headers: { 'Content-Type': 'text/html' } }), Response.json({ bad: key })])('redacts upstream errors', async response => {
     const d = deps(); d.fetch.mockResolvedValue(response)
     const result = await handleRequest(make(), env, d); expect(result.status).toBe(502); expect(await result.text()).not.toContain(key)
+  })
+  it('does not lose the `this` receiver on the default-dependency fetch path (Illegal invocation regression)', async () => {
+    // The Workers runtime throws "Illegal invocation" when a bare `fetch` reference is called as
+    // deps.fetch(...) (receiver becomes `deps`, not the global). Vitest/Node's fetch tolerates
+    // this silently, so the regression must be caught by asserting the call-site receiver itself.
+    const stub = vi.fn(function (this: unknown) {
+      if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation')
+      return Response.json(body)
+    })
+    vi.stubGlobal('fetch', stub)
+    try {
+      const response = await handleRequest(make(), env)
+      expect(response.status).toBe(200)
+      expect(stub).toHaveBeenCalled()
+    } finally { vi.unstubAllGlobals() }
   })
   it('times out without exposing upstream URL', async () => {
     vi.useFakeTimers()

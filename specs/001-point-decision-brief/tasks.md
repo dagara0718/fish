@@ -217,3 +217,27 @@ marker, no console errors). Live KHOA connection is still BLOCKED-KEY-KHOA (unch
 map interaction, preview, nearest-reference UI, and fishing access status all work correctly without
 it; only the per-point official species/environment fetch degrades to a graceful "불러오지 못했습니다"
 message, never a fixture fallback.
+
+## v1.3.1 hotfix (2026-09-16) — real KHOA connection restored
+
+Live mode was still failing end-to-end even after T059-T073, because the KHOA integration had never
+been exercised against a real authenticated response before this session. Root-caused against a live
+call (not documentation) and fixed:
+
+1. `predcYmd` ships as `YYYY-MM-DD` on the real response, not the request's `YYYYMMDD`. `parseItem`
+   (`shared/fishing-api.ts`) now accepts and normalizes both to canonical `YYYYMMDD`.
+2. `lastScr` is genuinely absent on real items; dropped from the PARTIAL/SUCCESS determination in
+   `normalizeOfficial` (`src/official-index/live-provider.ts`).
+3. The Worker's `deps.fetch` default was a bare `fetch` reference — an "Illegal invocation" bug,
+   the same class already fixed once in the frontend provider, now fixed server-side too
+   (`worker/src/index.ts`).
+4. The Worker's outbound fetch used `redirect: 'error'`, a value the Workers runtime does not
+   implement (throws `TypeError`). Changed to `redirect: 'manual'`; the existing `!response.ok` guard
+   already rejects any 3xx, so the security intent is unchanged.
+
+Both (3) and (4) were present since the original v1.2 Worker implementation and were never previously
+exercised against the real upstream (only against mocked `deps.fetch`, which tolerates both bugs
+silently on Node). Verified against the deployed Worker and against production
+https://dagara0718.github.io/fish/: real catalog of 1,750 records loads, 가거도 selected, real species
+(감성돔·기타어종·농어·돌돔·우럭·참돔) and environment values render, "낚시 이용 상태" shows 확인 필요
+(never 가능). `BLOCKED-KEY-KHOA` from the v1.2/v1.3 reports is resolved — Live mode is fully connected.
