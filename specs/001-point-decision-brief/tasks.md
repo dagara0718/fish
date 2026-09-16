@@ -196,3 +196,15 @@ credential-dependent half stays BLOCKED and is not claimed as complete.
   configured.
 
 Both require the user's own credentials. No account or key was fabricated to close them.
+
+# v1.3 Tasks — map location selection → decision detail panel
+
+- [X] T067 [US8] Map background click, arbitrary marker, marker/background click disambiguation in src/infrastructure/map/naver-map-provider.ts, src/infrastructure/map/naver-map-loader.ts (event handler typing only); REQ-FUNC-MAP-004~005; Depends on: v1.3 analyze; Blocks: T068. Verify no auto-select, replace-not-accumulate arbitrary marker, time-guarded disambiguation.
+- [X] T068 [US8] Nearest-candidate flow, full-catalog cache, list↔map preview sync in src/app/LiveApp.tsx, src/features/point-discovery/PointMap.tsx; REQ-FUNC-MAP-006~007, REQ-NFR-MAP-PERF-001; Depends on: T067; Blocks: T070. Verify capped/ordered candidates, no official API call before confirm, two-way marker/list highlight.
+- [X] T069 [US9] FishingAccessProvider/UnverifiedFishingAccessProvider boundary and AccessStatusPanel in src/official-index/fishing-access.ts, src/features/official-index/AccessStatusPanel.tsx; REQ-FUNC-ACCESS-002~003; Depends on: v1.3 analyze; Blocks: T070. Verify CHECK_REQUIRED never renders as allowed, separate from TrustStatus/official grade.
+- [X] T070 [US8,US9,US10] Wire access status + species summary into the detail panel; CSS for arbitrary marker, nearest-candidate list, access-status section in src/features/official-index/OfficialIndexPanel.tsx, src/styles/global.css; REQ-FUNC-SPECIES-001~002, REQ-NFR-DETAIL-001; Depends on: T068/T069; Blocks: T071.
+- [X] T071 Unit/E2E tests for arbitrary click, nearest ranking, marker/background disambiguation, access status never becoming ALLOWED without evidence, species summary wording; all v1.3 IDs; Depends on: T070; Blocks: T072. Preserve existing v1.2 tests.
+- [X] T072 Run typecheck/lint/Vitest/Worker/Playwright/build/secret scan; visual review desktop/mobile against the real NAVER SDK in production; re-run analyze; Depends on: T071; Blocks: T073.
+- [ ] T073 Commit/push main normally; verify Pages SHA/HTTP and real production map+click flow; Depends on: T072.
+
+US8 is independently testable with a mock SDK exposing map/marker click handlers. US9 is independently testable against the always-CHECK_REQUIRED provider. No v1.2 task or module is rewritten.

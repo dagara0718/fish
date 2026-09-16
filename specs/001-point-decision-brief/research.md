@@ -289,3 +289,12 @@ emitted by the v1.1 application.
 # v1.2 governing delta
 
 The current user-approved scope is documented in [v1.2-product-delta.md](v1.2-product-delta.md) and [live-map contract](contracts/live-map.md). Those additive requirements supersede earlier map/provider deferrals for this release only. Baseline and v1.1 behavior remains available in explicit DEMO mode. Live is default, uses validated official catalog/provider data, and never falls back to fixtures. Root DESIGN.md remains read-only. Cloudflare Worker ownership, transient GPS privacy, conservative trust policy, rollback and verification are specified in the delta.
+
+# v1.3 governing delta
+
+The current user-approved scope is documented in [v1.3-product-delta.md](v1.3-product-delta.md). It extends v1.2's
+map/Live flow with map location selection (official marker, arbitrary click, GPS candidate) resolving
+through explicit confirmation into a decision detail panel: fishing access status (uncertainty-first,
+never inferring "allowed" from absent data), current environment, and official species index. Access
+status, TrustStatus, and official grade/score remain three distinct models, never merged. The Demo
+fixture app, Worker, and root DESIGN.md are unchanged by this delta.

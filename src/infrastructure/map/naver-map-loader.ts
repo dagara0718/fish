@@ -5,7 +5,7 @@ export interface NaverSdk {
   LatLng: new (latitude: number, longitude: number) => unknown
   LatLngBounds: new () => { extend(position: unknown): void }
   Size: new (width: number, height: number) => unknown
-  Event: { addListener(target: unknown, event: string, handler: () => void): unknown; removeListener(listener: unknown): void }
+  Event: { addListener(target: unknown, event: string, handler: (event?: unknown) => void): unknown; removeListener(listener: unknown): void }
 }
 declare global { interface Window { naver?: { maps: NaverSdk }; navermap_authFailure?: () => void; fishNaverReady?: () => void } }
 let loading: Promise<NaverSdk> | undefined

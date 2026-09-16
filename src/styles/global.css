@@ -204,3 +204,23 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px 24px 32px; }
 .environment-item > .trust-badge { display: inline-flex; }
 .environment-item details,.species-card details { font-size:12px; overflow-wrap:anywhere }.environment-item summary,.species-card summary { cursor:pointer; color:#003ecc; padding:8px 0 }
 @media(max-width:640px) { .mobile-view-switch { display:flex; gap:8px; margin-top:16px }.live-discovery { display:block }.view-list .map-panel,.view-map .discovery-panel { display:none }.map-canvas { height:330px }.point-preview { flex-direction:column; align-items:stretch }.live-brief { padding:18px }.mode-switch { padding:6px 16px } }
+.map-marker--preview { border-width:2px; box-shadow:0 0 0 3px rgba(0,82,255,.18) }
+.arbitrary-preview p { margin:0 }
+.nearest-candidates { padding:20px 24px; border:1px solid #dee1e6; border-radius:16px; margin-bottom:20px }
+.nearest-candidates h3 { margin:0 0 12px; font-size:15px }
+.nearest-candidates ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px }
+.nearest-candidates li { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:10px 0; border-top:1px solid #eef0f3 }
+.nearest-candidates li:first-child { border-top:0 }
+.nearest-candidates li span { display:block; font-size:13px; color:#5b616e }
+.species-summary { padding:14px 18px; border:1px solid #dee1e6; border-radius:12px; margin-bottom:18px; background:#f7f9ff }
+.species-summary h4 { margin:0 0 8px; font-size:13px }
+.species-summary ul { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:10px; font-size:13px }
+.species-summary li { padding:4px 10px; border-radius:20px; background:white; border:1px solid #dee1e6 }
+.access-status-section { padding:20px 24px; border:1px solid #dee1e6; border-radius:16px; margin-bottom:20px }
+.access-status-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; border:1px dashed var(--color-warning); font-size:12px; font-weight:700; white-space:nowrap }
+.access-status-badge[data-status="ALLOWED_CONFIRMED"] { border-style:solid; color:#254d83; border-color:#b9cbe5 }
+.access-status-badge[data-status="PROHIBITED_CONFIRMED"],.access-status-badge[data-status="CONFLICT"] { border-style:solid; color:var(--color-danger); border-color:#d9aab0 }
+.access-status-guidance { margin:12px 0 0; font-size:14px }
+.access-status-evidence { list-style:none; margin:10px 0 0; padding:0; font-size:13px; color:#5b616e }
+.access-status-note { margin:12px 0 0; font-size:12px; color:#5b616e }
+@media(max-width:640px) { .nearest-candidates,.access-status-section { padding:16px } }
