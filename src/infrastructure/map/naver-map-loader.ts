@@ -15,16 +15,24 @@ export function loadNaverMap(key: string): Promise<NaverSdk> {
   loading = new Promise((resolve, reject) => {
     const script = document.createElement('script')
     const previousAuth = window.navermap_authFailure
+    let poll: ReturnType<typeof setInterval> | undefined
     const finish = (error?: string) => {
       clearTimeout(timer)
+      clearInterval(poll)
       delete window.fishNaverReady
       if (previousAuth) window.navermap_authFailure = previousAuth
       else delete window.navermap_authFailure
       if (error || !window.naver?.maps) { script.remove(); reject(new Error(error ?? 'LOAD_FAILED')) }
       else resolve(window.naver.maps)
     }
+    // The SDK invokes `callback` before it assigns window.naver, so wait for the namespace
+    // instead of treating the callback itself as readiness.
+    const settleWhenReady = () => {
+      if (window.naver?.maps?.Map) finish()
+      else poll ??= setInterval(() => { if (window.naver?.maps?.Map) finish() }, 50)
+    }
     const timer = setTimeout(() => finish('LOAD_FAILED'), 15000)
-    window.fishNaverReady = () => finish()
+    window.fishNaverReady = () => settleWhenReady()
     window.navermap_authFailure = () => finish('AUTH_FAILED')
     script.async = true
     script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?${new URLSearchParams({ ncpKeyId: key, callback: 'fishNaverReady' })}`
