@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 test('mobile Search-first flow has no core horizontal overflow and keeps non-color status text', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'mobile project only')
   await page.goto('./')
+  await page.getByRole('button', { name: 'Demo 모드' }).click()
   await page.getByLabel('포인트명 또는 지역 검색').fill('충돌')
   await page.getByRole('button', { name: '검색' }).click()
   await page.getByRole('button', { name: /샘플 충돌 포인트/ }).click()
@@ -17,6 +18,7 @@ test('mobile Search-first flow has no core horizontal overflow and keeps non-col
 test('desktop trust badges include icon and text semantics', async ({ page, isMobile }) => {
   test.skip(isMobile, 'desktop project only')
   await page.goto('./')
+  await page.getByRole('button', { name: 'Demo 모드' }).click()
   await page.getByLabel('포인트명 또는 지역 검색').fill('샘플 등대')
   await page.getByRole('button', { name: '검색' }).click()
   await page.getByRole('button', { name: /테스트 서부 구역/ }).click()

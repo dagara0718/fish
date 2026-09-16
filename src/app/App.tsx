@@ -18,12 +18,18 @@ import { OfficialIndexPanel } from '../features/official-index/OfficialIndexPane
 import { UseCurrentLocation } from '../features/official-index/UseCurrentLocation'
 import { getDemoOfficialIndex } from '../official-index/demo-provider'
 import type { LocationCandidate } from '../official-index/contracts'
+import { LiveApp } from './LiveApp'
 
 const catalog = createPointCatalog(SYNTHETIC_POINTS)
 const eventSink = new MemoryEventSink()
 const examples = [{ label: '샘플 등대', query: '샘플 등대' }, { label: '부분 데이터', query: '샘플 등대' }, { label: '정보충돌', query: '충돌' }]
 
 export function App() {
+  const [mode, setMode] = useState<'LIVE' | 'DEMO'>('LIVE')
+  return <><nav className="mode-switch" aria-label="데이터 모드"><button aria-pressed={mode === 'LIVE'} onClick={() => setMode('LIVE')}>Live 모드</button><button aria-pressed={mode === 'DEMO'} onClick={() => setMode('DEMO')}>Demo 모드</button></nav>{mode === 'LIVE' ? <LiveApp /> : <DemoApp />}</>
+}
+
+function DemoApp() {
   const [state, dispatch] = useReducer(appReducer, initialState)
   const [helpOpen, setHelpOpen] = useState(false)
   const evidenceTrigger = useRef<HTMLButtonElement | null>(null)

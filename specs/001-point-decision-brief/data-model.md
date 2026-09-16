@@ -249,3 +249,6 @@ Discriminated outcomes: `SUCCESS`, `PARTIAL`, `STALE_CACHE`, `COLLECTION_FAILED`
 | ConflictSet | `REQ-FUNC-TRUST-003`, `REQ-NFR-DATA-002` |
 | DataSource / AdapterResult / AnalyticsEvent | `REQ-NFR-OBS-001`, `REQ-NFR-COST-001` |
 | Excluded user GPS | `REQ-NFR-PRIV-001~002` |
+# v1.2 governing delta
+
+The current user-approved scope is documented in [v1.2-product-delta.md](v1.2-product-delta.md) and [live-map contract](contracts/live-map.md). Those additive requirements supersede earlier map/provider deferrals for this release only. Baseline and v1.1 behavior remains available in explicit DEMO mode. Live is default, uses validated official catalog/provider data, and never falls back to fixtures. Root DESIGN.md remains read-only. Cloudflare Worker ownership, transient GPS privacy, conservative trust policy, rollback and verification are specified in the delta.

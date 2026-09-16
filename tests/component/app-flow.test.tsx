@@ -5,6 +5,7 @@ import { App } from '../../src/app/App'
 
 async function search(query: string) {
   const user = userEvent.setup(); render(<App />)
+  await user.click(screen.getByRole('button', { name: 'Demo 모드' }))
   await user.type(screen.getByLabelText('포인트명 또는 지역 검색'), query)
   await user.click(screen.getByRole('button', { name: '검색' }))
   return user

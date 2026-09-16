@@ -11,7 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "live:check": "node scripts/live-check.mjs",
+    "secret:scan": "node scripts/live-check.mjs --scan-only"
   },
   "dependencies": {
     "react": "19.3.0",

@@ -1,0 +1,12 @@
+{
+  "name": "fish-official-proxy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc --ignoreConfig --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --lib ES2022,DOM,DOM.Iterable src/index.ts"
+  },
+  "devDependencies": { "wrangler": "^4.0.0", "vitest": "5.0.1", "typescript": "6.0.3" }
+}

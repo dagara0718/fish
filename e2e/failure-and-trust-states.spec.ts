@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 
 async function search(page: import('@playwright/test').Page, query: string) {
   await page.goto('./')
+  await page.getByRole('button', { name: 'Demo 모드' }).click()
   await page.getByLabel('포인트명 또는 지역 검색').fill(query)
   await page.getByRole('button', { name: '검색' }).click()
 }

@@ -341,3 +341,6 @@ sheet다. `DESIGN.md`는 계속 읽기 전용이며 브랜드·로고·거래 UI
 않고 거리·공식 기준 포인트·mapping method를 설명한다. 공식 등급과 TrustStatus는 각각 label을
 가져야 하며 green을 낚시 가능 의미로 쓰지 않는다. 미지원은 “공식 바다낚시지수 미지원 위치”로
 표시한다. demo/live provenance는 header 안내와 섹션 source에서 명확히 구분한다.
+# v1.2 governing delta
+
+The current user-approved scope is documented in [v1.2-product-delta.md](v1.2-product-delta.md) and [live-map contract](contracts/live-map.md). Those additive requirements supersede earlier map/provider deferrals for this release only. Baseline and v1.1 behavior remains available in explicit DEMO mode. Live is default, uses validated official catalog/provider data, and never falls back to fixtures. Root DESIGN.md remains read-only. Cloudflare Worker ownership, transient GPS privacy, conservative trust policy, rollback and verification are specified in the delta.

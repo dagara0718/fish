@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test('duplicate search requires explicit selection and evidence close restores focus', async ({ page }) => {
   await page.goto('./')
+  await page.getByRole('button', { name: 'Demo 모드' }).click()
   const search = page.getByLabel('포인트명 또는 지역 검색')
   await expect(search).toBeFocused()
   await search.fill('샘플 등대')
@@ -21,6 +22,7 @@ test('duplicate search requires explicit selection and evidence close restores f
 
 test('keyboard-only search and candidate activation works', async ({ page }) => {
   await page.goto('./')
+  await page.getByRole('button', { name: 'Demo 모드' }).click()
   await page.keyboard.type('캐시')
   await page.keyboard.press('Tab')
   await page.keyboard.press('Enter')

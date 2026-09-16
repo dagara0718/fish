@@ -379,3 +379,6 @@
 - **SC-010**: GPS 허용/거부/불가/후보 없음의 100%에서 자동선택과 raw-coordinate 저장·계측이 없다.
 - **SC-011**: production bundle 및 repository secret scan에서 provider key가 0건이다.
 - **SC-012**: 1440×900과 390×844에서 검색→후보→브리프→근거가 제품 UI로 완결된다.
+# v1.2 governing delta
+
+The current user-approved scope is documented in [v1.2-product-delta.md](v1.2-product-delta.md) and [live-map contract](contracts/live-map.md). Those additive requirements supersede earlier map/provider deferrals for this release only. Baseline and v1.1 behavior remains available in explicit DEMO mode. Live is default, uses validated official catalog/provider data, and never falls back to fixtures. Root DESIGN.md remains read-only. Cloudflare Worker ownership, transient GPS privacy, conservative trust policy, rollback and verification are specified in the delta.

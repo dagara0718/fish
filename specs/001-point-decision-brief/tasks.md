@@ -169,3 +169,30 @@ integration. T055-T058 are strictly sequential release gates. US4 is independent
 demo official point; US5 is independently testable by injecting browser geolocation outcomes.
 
 All executable tasks use `- [ ] T### [P?] [US?] Description` with exact files, Requirement IDs, design references where applicable, dependencies/blocks and verification. Deferred decisions use explicit `TBD`/`BLOCKED` identifiers and are not prerequisites for Must delivery.
+# v1.2 Tasks — current execution
+
+- [X] T059 [US6] Implement typed NAVER loader/provider and MapDiscovery in src/infrastructure/map/* and src/features/map/*; REQ-FUNC-MAP-001~003; Depends on: v1.2 analyze; Blocks: T063. Verify singleton/auth/errors/markers/bounds/resize/mobile switch.
+- [X] T060 [US7] Implement shared validated DTO and Worker security boundary in shared/fishing-api.ts and worker/src/index.ts, worker/wrangler.jsonc; REQ-NFR-LIVE-SEC-001; Depends on: v1.2 analyze; Blocks: T061. Verify allowlist, timeout, redaction, CORS and quota.
+- [X] T061 [US7] Implement provider/normalizer and catalog in src/official-index/live-provider.ts; REQ-FUNC-LIVE-001~003; Depends on: T060; Blocks: T062. Verify multiple species, partial/no data/malformed/cache, no client key.
+- [X] T062 [US7] Integrate explicit modes, GPS, live selection/evidence/retry in src/app/App.tsx and src/features/official-index/*; REQ-FUNC-LIVE-001~003, REQ-NFR-MAP-PRIV-001; Depends on: T059/T061; Blocks: T063. Verify no fixture fallback/auto-selection/late response or coordinate leak.
+- [X] T063 Add regression, Worker, map, live and browser tests in tests/*, worker/tests/* and e2e/*; all v1.2 IDs; Depends on: T062; Blocks: T065. Preserve old demo tests with explicit mode action.
+- [X] T064 Add .env.example, worker/.dev.vars.example, LIVE_API_SETUP.md, scripts/live-check.mjs and minimal Pages env injection; REQ-NFR-LIVE-SETUP-001; Depends on: T060; Blocks: T065. Verify key-free templates, no secrets printed.
+- [X] T065 Run typecheck/lint/Vitest/Worker/Playwright/build/secret scan, inspect desktop/mobile screenshots and re-analyze in specs/001-point-decision-brief/v1.2-validation.md; all v1.2 IDs; Depends on: T063/T064; Blocks: T066.
+- [~] T066 Commit/push main normally and verify Pages SHA/HTTP; record credential-dependent Worker/SDK live state in v1.2-validation.md; Depends on: T065; Blocks: final report. No accounts or secrets fabricated.
+
+US6 and US7 can be independently exercised with SDK/upstream mocks. Integration is sequential; no baseline task is removed. Live account/keys remain manually blocked, code delivery does not.
+
+## v1.2 status (2026-09-16)
+
+T059-T065 are complete and verified by `specs/001-point-decision-brief/v1.2-validation.md`.
+
+T066 is PARTIAL: the commit and push to `main` are done and GitHub Pages redeploys from that SHA, but the
+credential-dependent half stays BLOCKED and is not claimed as complete.
+
+- BLOCKED-KEY-NAVER: `VITE_NAVER_MAP_NCP_KEY_ID` / GitHub secret `NAVER_MAP_NCP_KEY_ID` is not set, so production
+  renders the graceful "NAVER 지도 설정이 필요합니다." map fallback instead of real tiles.
+- BLOCKED-KEY-KHOA: `KHOA_FISHING_SERVICE_KEY` is not registered as a Cloudflare Worker secret and the Worker is
+  not deployed, so `FISHING_API_BASE_URL` is unset and Live mode reports that the official connection is not
+  configured.
+
+Both require the user's own credentials. No account or key was fabricated to close them.

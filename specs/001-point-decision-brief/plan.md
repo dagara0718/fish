@@ -430,3 +430,6 @@ this release.
 | `REQ-NFR-SEC-001` | no-live-client boundary | source/bundle secret scan |
 | `REQ-NFR-PRIV-003` | transient GPS controller | privacy payload and storage spy tests |
 | `REQ-NFR-DATA-003` | official result parser boundary | malformed/missing-field tests |
+# v1.2 governing delta
+
+The current user-approved scope is documented in [v1.2-product-delta.md](v1.2-product-delta.md) and [live-map contract](contracts/live-map.md). Those additive requirements supersede earlier map/provider deferrals for this release only. Baseline and v1.1 behavior remains available in explicit DEMO mode. Live is default, uses validated official catalog/provider data, and never falls back to fixtures. Root DESIGN.md remains read-only. Cloudflare Worker ownership, transient GPS privacy, conservative trust policy, rollback and verification are specified in the delta.

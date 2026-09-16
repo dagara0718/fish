@@ -36,6 +36,11 @@ jobs:
         run: npm run test
       - name: Build
         run: npm run build
+        env:
+          VITE_NAVER_MAP_NCP_KEY_ID: ${{ secrets.NAVER_MAP_NCP_KEY_ID }}
+          VITE_FISHING_API_BASE_URL: ${{ vars.FISHING_API_BASE_URL }}
+      - name: Frontend secret scan
+        run: npm run secret:scan
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
@@ -45,4 +50,3 @@ jobs:
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
-

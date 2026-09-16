@@ -50,7 +50,10 @@ export interface MarineEnvironmentSnapshot {
 }
 
 export type OfficialIndexResult =
-  | { kind: 'SUCCESS' | 'PARTIAL' | 'STALE_CACHE'; point: OfficialFishingPointRef; species: OfficialSpeciesIndex[]; environment: MarineEnvironmentSnapshot; demo: true }
-  | { kind: 'COLLECTION_FAILED'; point: OfficialFishingPointRef; reason: string; demo: true }
-  | { kind: 'UNSUPPORTED_POINT'; reason: string; demo: true }
+  | { kind: 'SUCCESS' | 'PARTIAL' | 'STALE_CACHE'; point: OfficialFishingPointRef; species: OfficialSpeciesIndex[]; environment: MarineEnvironmentSnapshot; demo: boolean }
+  | { kind: 'COLLECTION_FAILED'; point: OfficialFishingPointRef; reason: string; demo: boolean }
+  | { kind: 'UNSUPPORTED_POINT'; reason: string; demo: boolean }
 
+export interface OfficialFishingIndexProvider {
+  getOfficialIndex(point: OfficialFishingPointRef, signal?: AbortSignal): Promise<OfficialIndexResult>
+}

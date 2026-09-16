@@ -183,3 +183,24 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px 24px 32px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+/* Auxiliary discovery map: list remains the keyboard-accessible source of selection. */
+.mode-switch { display:flex; gap:8px; justify-content:flex-end; padding:8px 4%; background:#f7f7f7; border-bottom:1px solid #dee1e6 }
+.mode-switch button,.mobile-view-switch button { border:0; border-radius:24px; padding:9px 18px; background:transparent; color:#5b616e }
+.mode-switch button[aria-pressed=true],.mobile-view-switch button[aria-pressed=true] { background:#eef0f3; color:#003ecc }
+.live-discovery { display:grid; grid-template-columns:320px minmax(0,1fr); gap:20px; margin:20px 0 }
+.live-discovery .discovery-panel { max-height:400px; overflow:auto; padding:24px }
+.live-candidates { list-style:none; margin:0; padding:0 }
+.live-candidates button { display:flex; flex-direction:column; gap:7px; width:100%; text-align:left; padding:16px 8px; border:0; border-bottom:1px solid #dee1e6; background:white }
+.live-candidates button:hover,.live-candidates button[aria-pressed=true] { background:#eef3ff }
+.live-candidates span { font-size:13px; color:#5b616e }
+.map-panel { position:relative; overflow:hidden; border:1px solid #dee1e6; border-radius:16px; background:#f7f7f7; min-width:0 }
+.map-canvas { height:360px; width:100% }
+.map-status { padding:12px 18px; margin:0; background:white; font-size:13px }
+.map-marker { display:block; white-space:nowrap; padding:7px 10px; border:1px solid #0052ff; border-radius:20px; background:white; color:#003ecc; font-size:12px }
+.point-preview { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 24px; border:1px solid #dee1e6; border-radius:16px; margin-bottom:20px }
+.point-preview h2 { margin:0; font-size:20px }.point-preview p { font-size:14px; color:#5b616e; margin:8px 0 }
+.live-brief { padding:24px; margin-bottom:24px }.live-brief h2 { font-size:24px }
+.mobile-view-switch { display:none }
+.environment-item > .trust-badge { display: inline-flex; }
+.environment-item details,.species-card details { font-size:12px; overflow-wrap:anywhere }.environment-item summary,.species-card summary { cursor:pointer; color:#003ecc; padding:8px 0 }
+@media(max-width:640px) { .mobile-view-switch { display:flex; gap:8px; margin-top:16px }.live-discovery { display:block }.view-list .map-panel,.view-map .discovery-panel { display:none }.map-canvas { height:330px }.point-preview { flex-direction:column; align-items:stretch }.live-brief { padding:18px }.mode-switch { padding:6px 16px } }
