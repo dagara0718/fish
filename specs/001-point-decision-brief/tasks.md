@@ -265,4 +265,23 @@ US11-US14 are independently testable against fixture environment records; no v1.
 - [X] T087 [US20] Species evidence audit — species-profiles.ts downgrade, contracts.ts EvidenceQuality, research doc rewrite; REQ-NFR-EVIDENCE-001~003; Depends on: v1.5 analyze; Blocks: T088.
 - [X] T088 Tests: retry, catalog cache/partial/stale, detail resilience, evidence downgrade, request supersession, worker httpClass, E2E; all v1.5 IDs; Depends on: T086/T087; Blocks: T089.
 - [X] T089 Full verification gate + visual review + production check + analyze re-run; Depends on: T088; Blocks: T090.
-- [ ] T090 Commit/push main; verify Pages; deploy Worker only if its code changed; Depends on: T089.
+- [X] T090 Commit/push main; verify Pages; deploy Worker only if its code changed; Depends on: T089.
+
+## v1.5 status (2026-09-17)
+
+T081-T090 complete. Analyze: CRITICAL 0, HIGH 0 (specs/001-point-decision-brief/v1.5-analyze.md). One
+real bug (in-flight catalog dedupe corrupting a different active caller after an abort) was found
+during this pass's own E2E testing, root-caused, fixed, and locked in with a unit regression test
+verified to fail without the fix.
+
+Deployed and verified against a live KHOA outage happening at verification time (not a synthetic
+test): the client retried page 1 three times (bounded, ~5.3-6s per attempt against the degraded
+upstream), then surfaced "공식 포인트를 현재 불러오지 못했습니다..." — no crash, no demo-data leak,
+no unbounded retry. Worker redeployed (httpClass field, additive) and confirmed live via curl and
+against the real outage. console.debug catalog observability events confirmed via captured browser
+console output during the live outage — no secret/GPS present.
+
+Species evidence: profileVersion bumped to 2026-09-v2. 우럭/감성돔/농어/돌돔/벵에돔 lost their sole
+namu.wiki/news/hobbyist-sourced numeric thresholds and now resolve to INSUFFICIENT_EVIDENCE; only 참돔
+retains a peer-reviewed/academic-backed claim. This is the intended, documented result of the v1.5
+evidence bar, not a regression — see research/species-environment-evidence.md for the full audit.
