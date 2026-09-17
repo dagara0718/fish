@@ -21,7 +21,7 @@ function validHour(value: string | null) { return value !== null && /^\d{2}$/.te
 function validMinute(value: string | null) { return value !== null && /^\d{2}$/.test(value) && +value <= 59 }
 function validCoordinate(value: string | null, max: number) { if (value === null) return false; const n = Number(value); return Number.isFinite(n) && Math.abs(n) <= max }
 
-async function proxyUpstream(remote: URL, deps: Dependencies, reply: (status: number, body: unknown) => Response, cacheKey: Request | undefined, cacheTtlSeconds: number, redact: (text: string) => boolean, malformedCheck: (body: string) => unknown): Promise<Response> {
+async function proxyUpstream(remote: URL, deps: Dependencies, reply: (status: number, body: unknown) => Response, cacheKey: Request | undefined, cacheTtlSeconds: number, redact: (text: string) => boolean, malformedCheck: (body: string) => unknown, requireJsonContentType = true): Promise<Response> {
   const cached = cacheKey ? await deps.cache?.match(cacheKey).catch(() => undefined) : undefined
   if (cached) return new Response(await cached.text(), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } })
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10_000)
@@ -34,7 +34,11 @@ async function proxyUpstream(remote: URL, deps: Dependencies, reply: (status: nu
       console.error('upstream_failure', JSON.stringify({ host: remote.host, httpClass, upstreamStatus: response.status }))
       return reply(502, { error: 'UPSTREAM_ERROR', httpClass })
     }
-    if (!response.headers.get('Content-Type')?.toLowerCase().includes('json')) return reply(502, { error: 'MALFORMED_RESPONSE' })
+    // KHOA's own marine endpoint sends real JSON bodies with Content-Type: text/html;charset=UTF-8
+    // (confirmed against the live upstream) — requireJsonContentType=false skips this header gate for
+    // that route only, relying on malformedCheck's schema validation below to reject an actual HTML
+    // error page instead. The fishing-index route keeps the strict header check unchanged.
+    if (requireJsonContentType && !response.headers.get('Content-Type')?.toLowerCase().includes('json')) return reply(502, { error: 'MALFORMED_RESPONSE' })
     const body = await response.text()
     if (body.length > 2_000_000) return reply(502, { error: 'MALFORMED_RESPONSE' })
     let parsed: unknown
@@ -46,6 +50,39 @@ async function proxyUpstream(remote: URL, deps: Dependencies, reply: (status: nu
   } catch (error) {
     return reply(controller.signal.aborted ? 504 : 502, { error: controller.signal.aborted ? 'TIMEOUT' : error instanceof Error && error.message === 'UPSTREAM_ERROR' ? 'UPSTREAM_ERROR' : 'MALFORMED_RESPONSE' })
   } finally { clearTimeout(timer) }
+}
+
+// Minimal schema guard for the verified KHOA marine response shape — narrower than JSON.parse
+// succeeding, so an unrelated well-formed JSON body (e.g. an HTML error page's wrapper, or a future
+// upstream field change) still fails closed instead of silently passing through.
+const OBS_DATE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
+function toFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') { const n = Number(value); if (Number.isFinite(n)) return n }
+  return undefined
+}
+function validateMarineResponse(body: string): unknown {
+  const raw = JSON.parse(body) as { result?: { data?: unknown; meta?: unknown } }
+  const result = raw?.result
+  if (!result || typeof result !== 'object') throw new Error('MALFORMED_RESPONSE')
+  const { data, meta } = result
+  if (!Array.isArray(data) || !meta || typeof meta !== 'object') throw new Error('MALFORMED_RESPONSE')
+  const metaRecord = meta as Record<string, unknown>
+  for (const key of ['sch_Stime', 'sch_Etime', 'lat', 'lon']) if (typeof metaRecord[key] !== 'string') throw new Error('MALFORMED_RESPONSE')
+  const items = (data as Record<string, unknown>[]).map(row => {
+    const speed = toFiniteNumber(row.current_speed)
+    const direction = toFiniteNumber(row.current_dir)
+    if (speed === undefined || direction === undefined) throw new Error('MALFORMED_RESPONSE')
+    if (direction < 0 || direction > 360) throw new Error('MALFORMED_RESPONSE')
+    if (typeof row.obs_date !== 'string' || !OBS_DATE.test(row.obs_date)) throw new Error('MALFORMED_RESPONSE')
+    // KHOA's real response confirms type: "" (empty string) — treated as a valid, if uninformative,
+    // value, never as malformed.
+    if (typeof row.type !== 'string') throw new Error('MALFORMED_RESPONSE')
+    // current_speed is cm/s and current_dir is a 0-360 bearing, but its convention (toward/from,
+    // true/magnetic north) is unstated by KHOA — never inferred here or downstream.
+    return { current_speed: speed, current_dir: direction, obs_date: row.obs_date, type: row.type }
+  })
+  return { result: { data: items, meta: { sch_Stime: metaRecord.sch_Stime, sch_Etime: metaRecord.sch_Etime, lat: metaRecord.lat, lon: metaRecord.lon } } }
 }
 
 async function handleFishingIndex(url: URL, env: Env, deps: Dependencies, reply: (status: number, body: unknown) => Response): Promise<Response> {
@@ -94,7 +131,7 @@ async function handleMarineCurrent(url: URL, env: Env, reply: (status: number, b
   // fishing-index route's unrelated 5-minute value (v1.6 REQ-NFR-MARINE-003).
   return proxyUpstream(remote, deps, reply, cacheKey, 600,
     text => text.includes(secret) || text.includes(encodeURIComponent(secret)),
-    body => JSON.parse(body))
+    validateMarineResponse, false)
 }
 
 export async function handleRequest(request: Request, env: Env, deps: Dependencies = { fetch: boundFetch, now: () => new Date() }): Promise<Response> {

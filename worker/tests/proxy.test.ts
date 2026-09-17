@@ -81,7 +81,7 @@ describe('Worker security boundary', () => {
 describe('Worker marine current route', () => {
   const marineKey = 'marine-test-only-secret'
   const marineEnv = { ...env, KHOA_MARINE_SERVICE_KEY: marineKey }
-  const marineBody = { result: { data: [{ current_speed: '12.3', current_dir: '215', obs_date: '2026-09-16 12:00', type: '전류' }] } }
+  const marineBody = { result: { data: [{ current_speed: '12.3', current_dir: '215', obs_date: '2026-09-16 12:00:00', type: '전류' }], meta: { sch_Stime: '2026-09-16 11:30', sch_Etime: '2026-09-16 12:30', lat: '35.123', lon: '129.456' } } }
   const marineQuery = 'SDate=20260916&SHour=11&SMinute=30&EDate=20260916&EHour=12&EMinute=30&lat=35.123&lon=129.456&ResultType=json'
   const makeMarine = (query = marineQuery, origin = 'https://dagara0718.github.io') => new Request(`https://worker.example/api/marine-current?${query}`, { headers: { Origin: origin } })
   const marineDeps = () => ({ fetch: vi.fn<typeof fetch>().mockResolvedValue(Response.json(marineBody)), now: () => new Date('2026-09-16T00:00:00Z') })
@@ -127,9 +127,47 @@ describe('Worker marine current route', () => {
     const result = await handleRequest(makeMarine(), marineEnv, d)
     expect(result.status).toBe(502); expect(await result.text()).not.toContain(marineKey)
   })
-  it('fails closed on malformed (non-JSON content-type) marine response', async () => {
-    const d = marineDeps(); d.fetch.mockResolvedValue(new Response('{}', { headers: { 'Content-Type': 'text/html' } }))
+  it('accepts a real KHOA response even though Content-Type is text/html;charset=UTF-8 (confirmed live upstream behavior)', async () => {
+    const d = marineDeps(); d.fetch.mockResolvedValue(new Response(JSON.stringify(marineBody), { headers: { 'Content-Type': 'text/html;charset=UTF-8' } }))
+    const response = await handleRequest(makeMarine(), marineEnv, d)
+    expect(response.status).toBe(200)
+    const parsed = await response.json()
+    expect(parsed.result.data[0]).toMatchObject({ current_speed: 12.3, current_dir: 215, obs_date: '2026-09-16 12:00:00', type: '전류' })
+  })
+  it('fails closed on an actual HTML error page even with a 200 status (text/html, not JSON)', async () => {
+    const d = marineDeps(); d.fetch.mockResolvedValue(new Response('<html><body>error</body></html>', { headers: { 'Content-Type': 'text/html;charset=UTF-8' } }))
     expect((await handleRequest(makeMarine(), marineEnv, d)).status).toBe(502)
+  })
+  it('fails closed on malformed (non-parseable) JSON', async () => {
+    const d = marineDeps(); d.fetch.mockResolvedValue(new Response('{not json', { headers: { 'Content-Type': 'application/json' } }))
+    expect((await handleRequest(makeMarine(), marineEnv, d)).status).toBe(502)
+  })
+  it('fails closed on well-formed JSON that does not match the marine schema', async () => {
+    const d = marineDeps(); d.fetch.mockResolvedValue(Response.json({ unrelated: true }))
+    expect((await handleRequest(makeMarine(), marineEnv, d)).status).toBe(502)
+  })
+  it('normalizes numeric-string current_speed/current_dir to canonical numbers', async () => {
+    const d = marineDeps()
+    const response = await handleRequest(makeMarine(), marineEnv, d)
+    const parsed = await response.json()
+    expect(parsed.result.data[0].current_speed).toBe(12.3)
+    expect(typeof parsed.result.data[0].current_speed).toBe('number')
+    expect(parsed.result.data[0].current_dir).toBe(215)
+    expect(typeof parsed.result.data[0].current_dir).toBe('number')
+  })
+  it('accepts an empty type string (confirmed present in the real KHOA response) rather than treating it as malformed', async () => {
+    const d = marineDeps(); d.fetch.mockResolvedValue(Response.json({ result: { data: [{ current_speed: '28.0', current_dir: '240', obs_date: '2026-09-17 12:00:00', type: '' }], meta: { sch_Stime: '2026-09-17 12:00', sch_Etime: '2026-09-17 13:00', lat: '36', lon: '126.5' } } }))
+    const response = await handleRequest(makeMarine(), marineEnv, d)
+    expect(response.status).toBe(200)
+    expect((await response.json()).result.data[0].type).toBe('')
+  })
+  it('rejects a current_dir outside 0-360 as malformed', async () => {
+    const d = marineDeps(); d.fetch.mockResolvedValue(Response.json({ result: { data: [{ current_speed: '10', current_dir: '400', obs_date: '2026-09-16 12:00:00', type: '' }], meta: { sch_Stime: '2026-09-16 12:00', sch_Etime: '2026-09-16 13:00', lat: '35', lon: '129' } } }))
+    expect((await handleRequest(makeMarine(), marineEnv, d)).status).toBe(502)
+  })
+  it('the fishing-index route keeps its strict JSON Content-Type gate unchanged', async () => {
+    const d = deps(); d.fetch.mockResolvedValue(Response.json(body, { headers: { 'Content-Type': 'text/html;charset=UTF-8' } }))
+    expect((await handleRequest(make(), env, d)).status).toBe(502)
   })
   it('rejects foreign origin for the marine route too', async () => {
     expect((await handleRequest(makeMarine(marineQuery, 'https://evil.example'), marineEnv, marineDeps())).status).toBe(403)
