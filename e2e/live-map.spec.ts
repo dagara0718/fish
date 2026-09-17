@@ -51,7 +51,7 @@ test('live map preview requires confirmation, GPS stays transient, responsive la
 test('Live proxy failure never displays demo fallback', async ({ page }) => {
   await page.route('https://proxy.example/**', route => route.fulfill({ status: 503, json: { error: 'NOT_CONFIGURED' } }))
   await page.goto('./'); await page.getByRole('button', { name: '검색', exact: true }).click()
-  await expect(page.getByText(/공식 후보 목록을 불러오지 못했습니다/)).toBeVisible()
+  await expect(page.getByText(/공식 포인트를 현재 불러오지 못했습니다/)).toBeVisible()
   await expect(page.getByText('DEMO DATA')).toHaveCount(0)
 })
 

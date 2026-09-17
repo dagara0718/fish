@@ -15,8 +15,9 @@ test.beforeEach(async ({ page }) => {
       }
     }}; window.fishNaverReady();` }))
   // Sanitized real-shaped KHOA items (confirmed 2026-09-16). 기타어종 must reach OFFICIAL INDEX but
-  // never ENVIRONMENT GUIDANCE. Water temp 12~15 is deliberately picked so 돌돔 lands on LOW and
-  // 감성돔/농어 land on INSUFFICIENT_EVIDENCE (no season evidence), exercising every visible state.
+  // never ENVIRONMENT GUIDANCE. After the v1.5 evidence audit, only 참돔 has a peer-reviewed/academic
+  // temperature+season claim; every other supported species lands on INSUFFICIENT_EVIDENCE — the
+  // honest consequence of a weak-source-only threshold being removed rather than kept.
   await page.route('https://proxy.example/**', route => route.fulfill({ json: { version: 1, fetchedAt: new Date().toISOString(), totalCount: 3, items: [
     { seafsPstnNm: '계약 시연 기준점', lat: 35, lot: 129, predcYmd: '20990101', predcNoonSeCd: '오전', seafsTgfshNm: '우럭', totalIndex: '좋음', lastScr: 70, minWtem: 12, maxWtem: 15 },
     { seafsPstnNm: '계약 시연 기준점', lat: 35, lot: 129, predcYmd: '20990101', predcNoonSeCd: '오전', seafsTgfshNm: '참돔', totalIndex: '보통', lastScr: 40 },

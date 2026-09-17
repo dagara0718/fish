@@ -60,7 +60,8 @@ describe('Live official index', () => {
   })
   it('builds actual catalog and rejects insecure proxy URL', async () => {
     const provider = new LiveOfficialFishingIndexProvider('https://proxy.example', vi.fn<typeof fetch>().mockResolvedValue(Response.json(envelope())))
-    expect(await provider.getCatalog('갯바위')).toHaveLength(1)
+    const catalog = await provider.getCatalog('갯바위')
+    expect(catalog.status).toBe('SUCCESS'); expect(catalog.points).toHaveLength(1)
     await expect(new LiveOfficialFishingIndexProvider('http://evil.example').getCatalog('갯바위')).rejects.toThrow()
   })
 })

@@ -21,6 +21,13 @@ describe('Worker security boundary', () => {
     const d = deps(); d.fetch.mockResolvedValue(new Response(null, { status: 302, headers: { Location: 'https://evil.example' } }))
     expect((await handleRequest(make(), env, d)).status).toBe(502)
   })
+  it.each([[429, 'UPSTREAM_429'], [500, 'UPSTREAM_5XX'], [503, 'UPSTREAM_5XX'], [404, 'UPSTREAM_ERROR']])('classifies upstream %s as httpClass %s for client retry decisions', async (status, httpClass) => {
+    const d = deps(); d.fetch.mockResolvedValue(new Response(null, { status: status as number }))
+    const result = await handleRequest(make(), env, d)
+    expect(result.status).toBe(502)
+    const parsed = await result.json()
+    expect(parsed).toMatchObject({ error: 'UPSTREAM_ERROR', httpClass })
+  })
   it.each(['gubun=other', 'gubun=선상&reqDate=20260230', 'gubun=선상&reqDate=2026-09-16', 'gubun=선상&numOfRows=301', 'gubun=선상&serviceKey=bad', 'gubun=선상&url=https://evil.example', 'gubun=선상&gubun=갯바위'])('rejects %s', async query => {
     const d = deps(); expect((await handleRequest(make(query), env, d)).status).toBe(400); expect(d.fetch).not.toHaveBeenCalled()
   })

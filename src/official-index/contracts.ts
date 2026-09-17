@@ -60,3 +60,15 @@ export type OfficialIndexResult =
 export interface OfficialFishingIndexProvider {
   getOfficialIndex(point: OfficialFishingPointRef, signal?: AbortSignal): Promise<OfficialIndexResult>
 }
+
+// Catalog freshness/completeness is a separate axis from TrustStatus (per-record forecast
+// freshness) — never merged into one field or one badge. See v1.5-product-delta.md.
+export type CatalogStatus = 'SUCCESS' | 'PARTIAL' | 'STALE_FALLBACK' | 'COLLECTION_FAILED'
+export interface CatalogResult {
+  status: CatalogStatus
+  points: OfficialFishingPointRef[]
+  fetchedAt: string
+  loadedPages: number
+  expectedPages?: number
+  failedPages: number[]
+}

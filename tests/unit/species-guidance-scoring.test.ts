@@ -7,7 +7,7 @@ const profile: SpeciesProfile = {
   preferredWaterTemperature: { min: 18, max: 20 },
   toleratedWaterTemperature: { min: 10, max: 26 },
   seasonalActiveMonths: [4, 5, 6],
-  evidence: [{ sourceTitle: 't', sourceOrganization: 'o', sourceUrl: 'https://example.com', retrievedAt: '2026-09-16T00:00:00.000Z', supportedClaim: 'c' }],
+  evidence: [{ sourceTitle: 't', sourceOrganization: 'o', sourceUrl: 'https://example.com', retrievedAt: '2026-09-16T00:00:00.000Z', supportedClaim: 'c', quality: 'PEER_REVIEWED' }],
   profileVersion: 'test-v1', reviewedAt: '2026-09-16T00:00:00.000Z',
 }
 

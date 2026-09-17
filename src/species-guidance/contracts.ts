@@ -16,12 +16,19 @@ export interface FactorResult {
   detail: string
 }
 
+// Tracked in domain/research even though the UI does not surface it directly (v1.5
+// REQ-NFR-EVIDENCE-001). A namu.wiki/news/hobbyist-fishing-site source is SECONDARY at best — never
+// the sole basis for a numeric threshold. Only PRIMARY_GOVERNMENT/PEER_REVIEWED/ACADEMIC_INSTITUTION
+// evidence may back a SpeciesProfile numeric range or season window.
+export type EvidenceQuality = 'PRIMARY_GOVERNMENT' | 'PEER_REVIEWED' | 'ACADEMIC_INSTITUTION' | 'SECONDARY' | 'UNVERIFIED'
+
 export interface SpeciesEvidence {
   sourceTitle: string
   sourceOrganization: string
   sourceUrl: string
   retrievedAt: string
   supportedClaim: string
+  quality: EvidenceQuality
 }
 
 export interface CelsiusRange { min: number; max: number }

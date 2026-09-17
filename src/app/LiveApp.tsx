@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LiveOfficialFishingIndexProvider } from '../official-index/live-provider'
-import type { FishingType, OfficialFishingPointRef, OfficialIndexResult } from '../official-index/contracts'
+import type { CatalogResult, FishingType, OfficialFishingPointRef, OfficialIndexResult } from '../official-index/contracts'
 import { UnverifiedFishingAccessProvider } from '../official-index/fishing-access'
 import type { FishingAccessStatus } from '../official-index/fishing-access'
 import { distanceKm, rankLocationCandidates, type TransientCoordinates } from '../official-index/location-candidates'
@@ -29,7 +29,6 @@ export function LiveApp() {
   const [view, setView] = useState<'list' | 'map'>('list')
   const request = useRef<AbortController | null>(null)
   const alive = useRef(true)
-  const catalogCache = useRef(new Map<FishingType, OfficialFishingPointRef[]>())
   useEffect(() => { alive.current = true; return () => { alive.current = false; request.current?.abort() } }, [])
   useEffect(() => {
     if (!selected) return
@@ -38,20 +37,17 @@ export function LiveApp() {
     return () => { disposed = true }
   }, [selected, accessProvider])
   const start = () => { request.current?.abort(); const controller = new AbortController(); request.current = controller; setBusy(true); return controller }
-  const loadFullCatalog = async (fishingType: FishingType, signal?: AbortSignal) => {
-    const cached = catalogCache.current.get(fishingType)
-    if (cached) return cached
-    const all = await provider.getCatalog(fishingType, signal)
-    catalogCache.current.set(fishingType, all)
-    return all
-  }
+  // Catalog note is prefixed to the outcome message, not a substitute for it — a partial/stale
+  // catalog must never read as a complete, fresh result (v1.5 REQ-NFR-LIVE-RESILIENCE-005).
+  const catalogNote = (status: CatalogResult['status']) => status === 'PARTIAL' ? '공식 포인트 일부만 불러왔습니다. ' : status === 'STALE_FALLBACK' ? '최근 저장된 공식 포인트 정보를 표시합니다. ' : ''
   const search = async () => {
     const controller = start(); setPreview(undefined); setSelected(undefined); setResult(undefined); setAccessStatus(undefined); setArbitrary(undefined); setNearestCandidates([])
     try {
-      const catalog = await loadFullCatalog(type, controller.signal)
+      const catalog = await provider.getCatalog(type, controller.signal)
       if (controller.signal.aborted) return
-      const matches = catalog.filter(point => point.placeName.includes(query.trim()))
-      setPoints(matches); setMessage(matches.length ? `${matches.length}개 공식 기준 포인트입니다. 직접 선택해 주세요.` : '공식 바다낚시지수 미지원 위치 또는 현재 제공 데이터가 없습니다.')
+      if (catalog.status === 'COLLECTION_FAILED') { setPoints([]); setMessage('공식 포인트를 현재 불러오지 못했습니다. 연결 설정을 확인한 뒤 다시 검색해 주세요.'); return }
+      const matches = catalog.points.filter(point => point.placeName.includes(query.trim()))
+      setPoints(matches); setMessage(catalogNote(catalog.status) + (matches.length ? `${matches.length}개 공식 기준 포인트입니다. 직접 선택해 주세요.` : '공식 바다낚시지수 미지원 위치 또는 현재 제공 데이터가 없습니다.'))
     } catch { if (!controller.signal.aborted) { setPoints([]); setMessage('공식 후보 목록을 불러오지 못했습니다. 연결 설정을 확인한 뒤 다시 검색해 주세요.') } }
     finally { if (!controller.signal.aborted) setBusy(false) }
   }
@@ -67,11 +63,12 @@ export function LiveApp() {
     const controller = start(); setArbitrary(coords); setPreview(undefined); setSelected(undefined); setResult(undefined); setAccessStatus(undefined); setNearestCandidates([])
     setMessage('선택 위치 주변 공식 기준 포인트를 찾는 중입니다.')
     try {
-      const all = await loadFullCatalog(type, controller.signal)
+      const catalog = await provider.getCatalog(type, controller.signal)
       if (controller.signal.aborted) return
-      const nearest = rankLocationCandidates(coords, all).slice(0, NEAREST_CANDIDATE_LIMIT)
+      if (catalog.status === 'COLLECTION_FAILED') { setMessage('공식 포인트를 현재 불러오지 못했습니다. 연결 설정을 확인한 뒤 다시 시도해 주세요.'); return }
+      const nearest = rankLocationCandidates(coords, catalog.points).slice(0, NEAREST_CANDIDATE_LIMIT)
       setNearestCandidates(nearest)
-      setMessage(nearest.length ? '선택 위치 주변 공식 기준 포인트입니다. 직접 확인해 주세요.' : '이 위치 주변에는 현재 공식 바다낚시지수 기준 포인트가 없습니다.')
+      setMessage(catalogNote(catalog.status) + (nearest.length ? '선택 위치 주변 공식 기준 포인트입니다. 직접 확인해 주세요.' : '이 위치 주변에는 현재 공식 바다낚시지수 기준 포인트가 없습니다.'))
     } catch { if (!controller.signal.aborted) setMessage('공식 후보 목록을 불러오지 못했습니다. 연결 설정을 확인한 뒤 다시 시도해 주세요.') }
     finally { if (!controller.signal.aborted) setBusy(false) }
   }

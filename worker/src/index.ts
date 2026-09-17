@@ -50,7 +50,13 @@ export async function handleRequest(request: Request, env: Env, deps: Dependenci
     // Workers' fetch only supports redirect 'follow'|'manual' ('error' throws a TypeError at the
     // edge). 'manual' returns the 3xx as-is, which the response.ok check below already rejects.
     const response = await deps.fetch(remote, { signal: controller.signal, redirect: 'manual', headers: { Accept: 'application/json' } })
-    if (!response.ok) return reply(502, { error: 'UPSTREAM_ERROR' })
+    if (!response.ok) {
+      // httpClass lets the client distinguish a KHOA rate limit from a general 5xx without guessing
+      // from the bare status (v1.5 REQ-NFR-OBSERVABILITY-001). Additive: `error` is unchanged.
+      const httpClass = response.status === 429 ? 'UPSTREAM_429' : response.status >= 500 ? 'UPSTREAM_5XX' : 'UPSTREAM_ERROR'
+      console.error('khoa_upstream_failure', JSON.stringify({ httpClass, upstreamStatus: response.status }))
+      return reply(502, { error: 'UPSTREAM_ERROR', httpClass })
+    }
     if (!response.headers.get('Content-Type')?.toLowerCase().includes('application/json')) return reply(502, { error: 'MALFORMED_RESPONSE' })
     const body = await response.text()
     if (body.length > 2_000_000) return reply(502, { error: 'MALFORMED_RESPONSE' })

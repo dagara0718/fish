@@ -452,3 +452,13 @@ AI/probability claim, never computed from official grade/score. Species without 
 SpeciesProfile (including KHOA's "기타어종") get no guidance entry. No directional current data is
 connected; MarineCurrentProvider ships NOT_CONNECTED only. NAVER map, Worker, KHOA connectivity, and
 the Demo fixture app are unchanged by this delta.
+
+# v1.5 governing delta
+
+The current user-approved scope is documented in [v1.5-product-delta.md](v1.5-product-delta.md). It hardens
+two things without adding features: (A) client-side bounded retry, partial-catalog preservation, and
+fresh/stale cache for the KHOA multi-page catalog fetch, so one transient upstream 502 no longer
+discards already-collected official points; (B) a stricter SpeciesProfile evidence audit — a
+namu.wiki/news/hobbyist source is never the sole basis for a numeric threshold, so five of six
+supported species lose their v1.4 threshold and now honestly resolve to INSUFFICIENT_EVIDENCE. NAVER
+map, the Worker's CORS/redirect/secret boundary, and KHOA parsing are unchanged in shape.

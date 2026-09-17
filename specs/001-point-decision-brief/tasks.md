@@ -253,3 +253,16 @@ https://dagara0718.github.io/fish/: real catalog of 1,750 records loads, 가거�
 - [ ] T080 Commit/push main; verify Pages; Depends on: T079.
 
 US11-US14 are independently testable against fixture environment records; no v1.3/hotfix module (NAVER map, Worker, LiveOfficialFishingIndexProvider's KHOA parsing, Demo app) is rewritten.
+
+# v1.5 Tasks — live data resilience + species evidence hardening
+
+- [X] T081 [US15] Failure taxonomy + retry/backoff helper in src/official-index/live-provider.ts; REQ-NFR-LIVE-RESILIENCE-001,006; Depends on: v1.5 analyze; Blocks: T082. Verify retryable vs fatal classification, bounded attempts, abort propagates immediately.
+- [X] T082 [US16] Resilient page collection preserving successful pages; CatalogResult contract in src/official-index/contracts.ts; REQ-NFR-LIVE-RESILIENCE-002~005; Depends on: T081; Blocks: T083. Verify partial preserved, page-1 failure handling, no false SUCCESS.
+- [X] T083 [US17] Catalog fresh/stale cache + in-flight dedupe in LiveOfficialFishingIndexProvider, remove redundant LiveApp.tsx cache; REQ-NFR-CATALOG-001~003; Depends on: T082; Blocks: T084. Verify fresh short-circuit, partial never overwrites complete cache.
+- [X] T084 [US18] Same retry helper applied to getOfficialIndex detail fetch, cache kept separate from catalog cache; Depends on: T081; Blocks: T086.
+- [X] T085 [US19] Worker httpClass field (additive) + client console.debug observability events; REQ-NFR-OBSERVABILITY-001; Depends on: T081; Blocks: T086. Verify no secret/GPS in logs.
+- [X] T086 [US15-19] UI PARTIAL/STALE_FALLBACK/COLLECTION_FAILED copy in LiveApp.tsx, explicit-selection semantics preserved; Depends on: T083/T084/T085; Blocks: T088.
+- [X] T087 [US20] Species evidence audit — species-profiles.ts downgrade, contracts.ts EvidenceQuality, research doc rewrite; REQ-NFR-EVIDENCE-001~003; Depends on: v1.5 analyze; Blocks: T088.
+- [X] T088 Tests: retry, catalog cache/partial/stale, detail resilience, evidence downgrade, request supersession, worker httpClass, E2E; all v1.5 IDs; Depends on: T086/T087; Blocks: T089.
+- [X] T089 Full verification gate + visual review + production check + analyze re-run; Depends on: T088; Blocks: T090.
+- [ ] T090 Commit/push main; verify Pages; deploy Worker only if its code changed; Depends on: T089.
