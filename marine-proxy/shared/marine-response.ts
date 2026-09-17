@@ -1,6 +1,13 @@
-// Shared between worker/src/index.ts and marine-proxy/api/marine-current.ts so the two independent
-// server-side execution paths validate the KHOA marine contract identically (v1.6.2 §15 — do not let
-// two validators drift apart). Pure, no runtime-specific imports.
+// Canonical KHOA marine validator, shared by worker/src/index.ts (via a relative import reaching
+// into this directory) and marine-proxy's own runtime, so the two independent server-side execution
+// paths validate the KHOA marine contract identically instead of drifting (v1.6.2 §15).
+//
+// This file lives inside marine-proxy/ (not repo-root shared/) because Vercel's Node.js Functions
+// only bundle files reachable from the project's own Root Directory (marine-proxy/) — a relative
+// import reaching outside it is not included in the deployed function bundle and fails at runtime
+// with ERR_MODULE_NOT_FOUND (v1.6.2 VERCEL_ESM_MODULE_RESOLUTION incident). Pure, no runtime-specific
+// imports, so the Cloudflare Worker can still import it via a longer relative path with no changes
+// to its own behavior.
 
 // KHOA's real marine endpoint sends HTTP 200 with a genuine JSON body but
 // Content-Type: text/html;charset=UTF-8 (confirmed against the live upstream, v1.6.1). Callers must
@@ -45,3 +52,17 @@ export const MARINE_PARAMS = new Set(['SDate', 'SHour', 'SMinute', 'EDate', 'EHo
 export function validHour(value: string | null): boolean { return value !== null && /^\d{2}$/.test(value) && +value <= 23 }
 export function validMinute(value: string | null): boolean { return value !== null && /^\d{2}$/.test(value) && +value <= 59 }
 export function validCoordinate(value: string | null, max: number): boolean { if (value === null) return false; const n = Number(value); return Number.isFinite(n) && Math.abs(n) <= max }
+
+// A local copy of shared/fishing-api.ts's calendar-date check — deliberately duplicated (7 lines)
+// rather than imported, since importing across the Vercel Root Directory boundary is exactly the bug
+// this file's relocation fixes. This is a generic YYYYMMDD-calendar validator, not KHOA marine
+// contract logic, so duplicating it does not create the "two marine validators" drift this file
+// exists to prevent.
+function isRealCalendarDate(iso: string): boolean {
+  const parsed = new Date(`${iso}T00:00:00Z`)
+  return Number.isFinite(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === iso
+}
+export function validDate(date: string): boolean {
+  if (!/^\d{8}$/.test(date)) return false
+  return isRealCalendarDate(`${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`)
+}

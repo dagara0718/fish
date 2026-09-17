@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { respond } from './_adapter'
+import { respond } from './_adapter.js'
 
 export const config = { runtime: 'nodejs' }
 

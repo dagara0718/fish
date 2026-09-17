@@ -1,5 +1,9 @@
 import { parseOfficialResponse, validDate } from '../../shared/fishing-api'
-import { MARINE_PARAMS, validCoordinate, validHour, validMinute, validateMarineResponse } from '../../shared/marine-response'
+// This reaches into marine-proxy/ (not repo-root shared/) because Vercel's Node.js Functions only
+// bundle files inside their own project Root Directory — see marine-proxy/shared/marine-response.ts
+// for the full rationale (v1.6.2 VERCEL_ESM_MODULE_RESOLUTION). wrangler has no such restriction and
+// resolves this relative path against the full repo checkout like any other local import.
+import { MARINE_PARAMS, validCoordinate, validHour, validMinute, validateMarineResponse } from '../../marine-proxy/shared/marine-response'
 
 interface RateLimiter { limit(input: { key: string }): Promise<{ success: boolean }> }
 export interface Env { KHOA_FISHING_SERVICE_KEY?: string; KHOA_MARINE_SERVICE_KEY?: string; REQUEST_LIMITER?: RateLimiter }

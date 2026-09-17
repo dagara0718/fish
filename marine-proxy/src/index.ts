@@ -1,5 +1,9 @@
-import { validDate } from '../../shared/fishing-api'
-import { MARINE_PARAMS, validCoordinate, validHour, validMinute, validateMarineResponse } from '../../shared/marine-response'
+// Explicit .js specifiers: Vercel's Node.js ESM runtime does not rewrite extensionless relative
+// imports the way a bundler would, so `./foo` (no extension) fails at runtime with
+// ERR_MODULE_NOT_FOUND even though it resolves fine under `moduleResolution: bundler` at typecheck
+// time (v1.6.2 VERCEL_ESM_MODULE_RESOLUTION). TypeScript with `bundler` resolution accepts a `.js`
+// specifier pointing at a `.ts` source file, so this is typecheck-safe.
+import { MARINE_PARAMS, validCoordinate, validDate, validHour, validMinute, validateMarineResponse } from '../shared/marine-response.js'
 
 // v1.6.2 PoC: an alternate server-side path for /api/marine-current, deployed outside Cloudflare
 // Workers' global edge (see specs/001-point-decision-brief/v1.6.2-result.md for why). Deliberately

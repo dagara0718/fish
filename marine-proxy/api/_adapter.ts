@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { handleRequest, type Env } from '../src/index'
+import { handleRequest, type Env } from '../src/index.js'
 
 // Vercel's Node.js Serverless Functions use the classic (req, res) signature; the proxy's own logic
 // is written against the standard Fetch API Request/Response (shared shape with the Cloudflare
