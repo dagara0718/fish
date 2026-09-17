@@ -8,7 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/testing/setup.ts'],
-    exclude: ['e2e/**', 'node_modules/**', 'dist/**', 'worker/**'],
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**', 'worker/**', 'marine-proxy/**'],
     css: true,
     coverage: { reporter: ['text', 'html'] },
   },

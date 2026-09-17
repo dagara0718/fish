@@ -1,25 +1,21 @@
 import { parseOfficialResponse, validDate } from '../../shared/fishing-api'
+import { MARINE_PARAMS, validCoordinate, validHour, validMinute, validateMarineResponse } from '../../shared/marine-response'
 
 interface RateLimiter { limit(input: { key: string }): Promise<{ success: boolean }> }
 export interface Env { KHOA_FISHING_SERVICE_KEY?: string; KHOA_MARINE_SERVICE_KEY?: string; REQUEST_LIMITER?: RateLimiter }
 export interface Dependencies { fetch: typeof fetch; cache?: Pick<Cache, 'match' | 'put'>; now: () => Date }
 const fishingUpstream = 'https://apis.data.go.kr/1192136/fcstFishingv2/GetFcstFishingApiServicev2'
-// Verified 2026-09-17 against KHOA's own 바다누리 portal — see
+// Verified 2026-09-17 against KHOA's own 바다누리 포탈 — see
 // specs/001-point-decision-brief/research/marine-current-source-review.md. A separate credential
 // system from the public-data-portal general service key used above.
 const marineUpstream = 'https://khoa.go.kr/oceandata/api/tidalCurrentPoint/search.do'
 const origins = new Set(['https://dagara0718.github.io', 'http://localhost:5173', 'http://127.0.0.1:5173'])
 const fishingParams = new Set(['gubun', 'reqDate', 'placeName', 'pageNo', 'numOfRows'])
-const marineParams = new Set(['SDate', 'SHour', 'SMinute', 'EDate', 'EHour', 'EMinute', 'lat', 'lon', 'ResultType'])
 
 // Bound wrapper: a bare `fetch` reference loses its receiver when called as deps.fetch(...) and
 // throws "Illegal invocation" in the Workers runtime (same class of bug fixed in the frontend
 // LiveOfficialFishingIndexProvider).
 const boundFetch: typeof fetch = (input, init) => globalThis.fetch(input, init)
-
-function validHour(value: string | null) { return value !== null && /^\d{2}$/.test(value) && +value <= 23 }
-function validMinute(value: string | null) { return value !== null && /^\d{2}$/.test(value) && +value <= 59 }
-function validCoordinate(value: string | null, max: number) { if (value === null) return false; const n = Number(value); return Number.isFinite(n) && Math.abs(n) <= max }
 
 async function proxyUpstream(remote: URL, deps: Dependencies, reply: (status: number, body: unknown) => Response, cacheKey: Request | undefined, cacheTtlSeconds: number, redact: (text: string) => boolean, malformedCheck: (body: string) => unknown, requireJsonContentType = true): Promise<Response> {
   const cached = cacheKey ? await deps.cache?.match(cacheKey).catch(() => undefined) : undefined
@@ -59,39 +55,6 @@ async function proxyUpstream(remote: URL, deps: Dependencies, reply: (status: nu
   } finally { clearTimeout(timer) }
 }
 
-// Minimal schema guard for the verified KHOA marine response shape — narrower than JSON.parse
-// succeeding, so an unrelated well-formed JSON body (e.g. an HTML error page's wrapper, or a future
-// upstream field change) still fails closed instead of silently passing through.
-const OBS_DATE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
-function toFiniteNumber(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value === 'string' && value.trim() !== '') { const n = Number(value); if (Number.isFinite(n)) return n }
-  return undefined
-}
-function validateMarineResponse(body: string): unknown {
-  const raw = JSON.parse(body) as { result?: { data?: unknown; meta?: unknown } }
-  const result = raw?.result
-  if (!result || typeof result !== 'object') throw new Error('MALFORMED_RESPONSE')
-  const { data, meta } = result
-  if (!Array.isArray(data) || !meta || typeof meta !== 'object') throw new Error('MALFORMED_RESPONSE')
-  const metaRecord = meta as Record<string, unknown>
-  for (const key of ['sch_Stime', 'sch_Etime', 'lat', 'lon']) if (typeof metaRecord[key] !== 'string') throw new Error('MALFORMED_RESPONSE')
-  const items = (data as Record<string, unknown>[]).map(row => {
-    const speed = toFiniteNumber(row.current_speed)
-    const direction = toFiniteNumber(row.current_dir)
-    if (speed === undefined || direction === undefined) throw new Error('MALFORMED_RESPONSE')
-    if (direction < 0 || direction > 360) throw new Error('MALFORMED_RESPONSE')
-    if (typeof row.obs_date !== 'string' || !OBS_DATE.test(row.obs_date)) throw new Error('MALFORMED_RESPONSE')
-    // KHOA's real response confirms type: "" (empty string) — treated as a valid, if uninformative,
-    // value, never as malformed.
-    if (typeof row.type !== 'string') throw new Error('MALFORMED_RESPONSE')
-    // current_speed is cm/s and current_dir is a 0-360 bearing, but its convention (toward/from,
-    // true/magnetic north) is unstated by KHOA — never inferred here or downstream.
-    return { current_speed: speed, current_dir: direction, obs_date: row.obs_date, type: row.type }
-  })
-  return { result: { data: items, meta: { sch_Stime: metaRecord.sch_Stime, sch_Etime: metaRecord.sch_Etime, lat: metaRecord.lat, lon: metaRecord.lon } } }
-}
-
 async function handleFishingIndex(url: URL, env: Env, deps: Dependencies, reply: (status: number, body: unknown) => Response): Promise<Response> {
   for (const key of url.searchParams.keys()) if (!fishingParams.has(key) || url.searchParams.getAll(key).length !== 1) return reply(400, { error: 'INVALID_PARAMETERS' })
   const gubun = url.searchParams.get('gubun')
@@ -118,7 +81,7 @@ async function handleFishingIndex(url: URL, env: Env, deps: Dependencies, reply:
 }
 
 async function handleMarineCurrent(url: URL, env: Env, reply: (status: number, body: unknown) => Response, deps: Dependencies): Promise<Response> {
-  for (const key of url.searchParams.keys()) if (!marineParams.has(key) || url.searchParams.getAll(key).length !== 1) return reply(400, { error: 'INVALID_PARAMETERS' })
+  for (const key of url.searchParams.keys()) if (!MARINE_PARAMS.has(key) || url.searchParams.getAll(key).length !== 1) return reply(400, { error: 'INVALID_PARAMETERS' })
   const sdate = url.searchParams.get('SDate'); const edate = url.searchParams.get('EDate')
   const resultType = url.searchParams.get('ResultType') ?? 'json'
   if (!validDate(sdate ?? '') || !validDate(edate ?? '') || !validHour(url.searchParams.get('SHour')) || !validMinute(url.searchParams.get('SMinute')) || !validHour(url.searchParams.get('EHour')) || !validMinute(url.searchParams.get('EMinute')) || !validCoordinate(url.searchParams.get('lat'), 90) || !validCoordinate(url.searchParams.get('lon'), 180) || resultType !== 'json') return reply(400, { error: 'INVALID_PARAMETERS' })
