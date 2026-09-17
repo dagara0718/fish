@@ -28,7 +28,13 @@ export function PointMap({ points, location, selectedId, previewId, arbitrary, o
     }).catch((error: Error) => { if (!disposed) setState(error.message === 'KEY_MISSING' ? 'KEY_MISSING' : error.message === 'AUTH_FAILED' ? 'AUTH_FAILED' : 'LOAD_FAILED') })
     return () => { disposed = true; provider.current?.destroy(); provider.current = null }
   }, [])
-  useEffect(() => { provider.current?.update(points, location, selectedId, previewId, arbitrary, point => previewCallback.current(point)) }, [points, location, selectedId, previewId, arbitrary, state])
+  // Marker sync only — runs on every state change (preview/selection/arbitrary click included), but
+  // never adjusts the camera, so a user's own zoom/pan is never overwritten by an unrelated update.
+  useEffect(() => { provider.current?.syncMarkers(points, location, selectedId, previewId, arbitrary, point => previewCallback.current(point)) }, [points, location, selectedId, previewId, arbitrary, state])
+  // Camera reframe — deliberately excludes selectedId/previewId/arbitrary from its dependency list.
+  // `points` only changes on a new search result set, and `location` only changes via the explicit
+  // "현재 위치 사용" action (see LiveApp.tsx) — both are legitimate reasons to reframe; nothing else is.
+  useEffect(() => { if (state === 'READY') provider.current?.frame(points, location) }, [points, location, state])
   const messages: Record<MapState, string> = { SDK_LOADING: '지도를 불러오는 중입니다.', READY: '공식 기준 포인트를 클릭하거나, 지도의 다른 위치를 클릭해 주변 공식 기준 포인트를 확인하세요.', KEY_MISSING: 'NAVER 지도 설정이 필요합니다.', AUTH_FAILED: '지도 인증을 확인해 주세요.', LOAD_FAILED: '지도를 불러오지 못했습니다. 후보 목록을 이용해 주세요.' }
   return <section className="map-panel" aria-label="포인트 지도"><div className="map-canvas" ref={element} /><p className="map-status" role="status">{messages[state]}</p></section>
 }

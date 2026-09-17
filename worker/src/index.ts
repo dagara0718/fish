@@ -31,7 +31,14 @@ async function proxyUpstream(remote: URL, deps: Dependencies, reply: (status: nu
     const response = await deps.fetch(remote, { signal: controller.signal, redirect: 'manual', headers: { Accept: 'application/json' } })
     if (!response.ok) {
       const httpClass = response.status === 429 ? 'UPSTREAM_429' : response.status >= 500 ? 'UPSTREAM_5XX' : 'UPSTREAM_ERROR'
-      console.error('upstream_failure', JSON.stringify({ host: remote.host, httpClass, upstreamStatus: response.status }))
+      // Diagnostic fields only — no secret, no raw GPS, no upstream body. `server`/`cfRay` let us
+      // tell a Cloudflare-edge-layer error (520/521/522/523/524, a `cf-ray` header, `Server: cloudflare`)
+      // apart from an actual KHOA application error, without ever logging the response body itself.
+      console.error('upstream_failure', JSON.stringify({
+        host: remote.host, httpClass, upstreamStatus: response.status,
+        server: response.headers.get('Server'), cfRay: response.headers.get('CF-RAY'),
+        contentType: response.headers.get('Content-Type'), date: response.headers.get('Date'),
+      }))
       return reply(502, { error: 'UPSTREAM_ERROR', httpClass })
     }
     // KHOA's own marine endpoint sends real JSON bodies with Content-Type: text/html;charset=UTF-8

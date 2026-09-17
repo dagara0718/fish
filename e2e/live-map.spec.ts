@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   // so the provider's own stopPropagation/time-guard disambiguation is exercised faithfully.
   await page.route('https://oapi.map.naver.com/**', route => route.fulfill({ contentType: 'application/javascript', body: `
     window.naver={maps:{
-      Map:class { constructor(el){this.el=el;this.isMap=true;el.dataset.mockMap='true';} fitBounds(){this.el.dataset.bounds='fit'} panTo(){} setZoom(){} setSize(){} destroy(){this.el.replaceChildren()} },
+      Map:class { constructor(el){this.el=el;this.isMap=true;el.dataset.mockMap='true';el.dataset.fitCount='0';el.dataset.zoomCount='0';el.dataset.panCount='0';} fitBounds(){this.el.dataset.bounds='fit';this.el.dataset.fitCount=String(Number(this.el.dataset.fitCount)+1)} panTo(){this.el.dataset.panCount=String(Number(this.el.dataset.panCount)+1)} setZoom(){this.el.dataset.zoomCount=String(Number(this.el.dataset.zoomCount)+1)} setSize(){} destroy(){this.el.replaceChildren()} },
       LatLng:class {constructor(lat,lon){this.lat=lat;this.lon=lon}}, LatLngBounds:class {extend(){}}, Size:class {},
       Marker:class {constructor(o){this.el=document.createElement('button');this.el.textContent=o.title;this.el.className='mock-marker';o.map.el.append(this.el)}setMap(){this.el.remove()}},
       Event:{
@@ -83,6 +83,32 @@ test('arbitrary map click surfaces nearest official candidates without auto-sele
   await page.getByRole('button', { name: '이 포인트 선택' }).click()
   await expect(page.getByRole('heading', { name: '어종별 공식 바다낚시지수' })).toBeVisible()
   expect(perPointCalls()).toBeGreaterThan(0)
+})
+
+test('user-driven viewport is preserved across preview, selection, and arbitrary map clicks', async ({ page, isMobile }) => {
+  await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1440, height: 900 })
+  await page.goto('./')
+  await page.getByLabel('포인트명 또는 지역 검색').fill('계약')
+  await page.getByRole('button', { name: '검색', exact: true }).click()
+  if (isMobile) await page.getByRole('button', { name: '지도', exact: true }).click()
+  await expect(page.getByRole('button', { name: '● 공식 기준 · 계약 시연 기준점' })).toBeVisible()
+  const map = page.locator('[data-mock-map]')
+  const cameraCallCount = async () => {
+    const [fit, zoom, pan] = await Promise.all([map.getAttribute('data-fit-count'), map.getAttribute('data-zoom-count'), map.getAttribute('data-pan-count')])
+    return Number(fit) + Number(zoom) + Number(pan)
+  }
+  const afterInitialSearch = await cameraCallCount()
+  // Official marker preview must never move the camera — the user's own zoom/pan is authoritative.
+  await page.getByRole('button', { name: '● 공식 기준 · 계약 시연 기준점' }).click()
+  expect(await cameraCallCount()).toBe(afterInitialSearch)
+  // Confirming the selection (data fetch, detail panel render) must not move the camera either.
+  await page.getByRole('button', { name: '이 포인트 선택' }).click()
+  await expect(page.getByRole('heading', { name: '어종별 공식 바다낚시지수' })).toBeVisible()
+  expect(await cameraCallCount()).toBe(afterInitialSearch)
+  // An arbitrary background click adds a marker for the clicked location but must not reframe.
+  await map.click({ position: { x: 250, y: 300 } })
+  await expect(page.getByRole('heading', { name: '선택 위치' })).toBeVisible()
+  expect(await cameraCallCount()).toBe(afterInitialSearch)
 })
 
 test('marker click does not also register as a background arbitrary-location click', async ({ page, isMobile }) => {

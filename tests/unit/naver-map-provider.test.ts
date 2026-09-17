@@ -58,7 +58,7 @@ describe('NaverMapProvider map click handling', () => {
     const onBackgroundClick = vi.fn()
     const onPreview = vi.fn()
     const provider = new NaverMapProvider(makeSdk(), document.createElement('div'), onBackgroundClick)
-    provider.update([point], undefined, undefined, undefined, undefined, onPreview)
+    provider.syncMarkers([point], undefined, undefined, undefined, undefined, onPreview)
     const marker = (provider as unknown as { markers: MockMarker[] }).markers[0]!
     marker.clickHandlers[0]?.({ stopPropagation: vi.fn() })
     const map = (provider as unknown as { map: MockMap }).map
@@ -69,45 +69,72 @@ describe('NaverMapProvider map click handling', () => {
   it('does not fail when the click event lacks stopPropagation', () => {
     const onPreview = vi.fn()
     const provider = new NaverMapProvider(makeSdk(), document.createElement('div'), vi.fn())
-    provider.update([point], undefined, undefined, undefined, undefined, onPreview)
+    provider.syncMarkers([point], undefined, undefined, undefined, undefined, onPreview)
     const marker = (provider as unknown as { markers: MockMarker[] }).markers[0]!
     expect(() => marker.clickHandlers[0]?.(undefined)).not.toThrow()
     expect(onPreview).toHaveBeenCalledWith(point)
   })
 })
 
-describe('NaverMapProvider marker rendering', () => {
-  it('renders the arbitrary location marker distinctly and fits bounds for multiple markers', () => {
+describe('NaverMapProvider marker rendering (syncMarkers never touches the camera)', () => {
+  it('renders the arbitrary location marker distinctly without moving the camera', () => {
     const provider = new NaverMapProvider(makeSdk(), document.createElement('div'), vi.fn())
-    provider.update([point], undefined, undefined, undefined, { latitude: 1, longitude: 2 }, vi.fn())
+    provider.syncMarkers([point], undefined, undefined, undefined, { latitude: 1, longitude: 2 }, vi.fn())
     const markers = (provider as unknown as { markers: MockMarker[] }).markers
     expect(markers.some(marker => marker.opts.title === '× 선택 위치')).toBe(true)
-    expect((provider as unknown as { map: MockMap }).map.boundsFit).toBe(true)
+    const map = (provider as unknown as { map: MockMap }).map
+    expect(map.boundsFit).toBe(false); expect(map.zoom).toBeUndefined(); expect(map.panned).toBeUndefined()
   })
-  it('marks the previewed official marker with the preview style, distinct from selected', () => {
+  it('marks the previewed official marker with the preview style, distinct from selected, without moving the camera', () => {
     const other: OfficialFishingPointRef = { ...point, officialPointId: 'p2', placeName: '다른 포인트' }
     const provider = new NaverMapProvider(makeSdk(), document.createElement('div'), vi.fn())
-    provider.update([point, other], undefined, other.officialPointId, point.officialPointId, undefined, vi.fn())
+    provider.syncMarkers([point, other], undefined, other.officialPointId, point.officialPointId, undefined, vi.fn())
     const markers = (provider as unknown as { markers: MockMarker[] }).markers
     expect(markers[0]!.opts.icon.content.className).toContain('map-marker--preview')
     expect(markers[0]!.opts.title).toContain('● 공식 기준')
     expect(markers[1]!.opts.title).toContain('◆ 선택')
     expect(markers[1]!.opts.icon.content.className).not.toContain('map-marker--preview')
+    expect((provider as unknown as { map: MockMap }).map.boundsFit).toBe(false)
   })
-  it('pans and zooms to a single arbitrary marker without any official points', () => {
+  it('an arbitrary-only marker never pans/zooms the camera (viewport-preserving background click)', () => {
     const provider = new NaverMapProvider(makeSdk(), document.createElement('div'), vi.fn())
-    provider.update([], undefined, undefined, undefined, { latitude: 3, longitude: 4 }, vi.fn())
+    provider.syncMarkers([], undefined, undefined, undefined, { latitude: 3, longitude: 4 }, vi.fn())
     const map = (provider as unknown as { map: MockMap }).map
-    expect(map.boundsFit).toBe(false)
-    expect(map.zoom).toBe(10)
+    expect(map.boundsFit).toBe(false); expect(map.zoom).toBeUndefined(); expect(map.panned).toBeUndefined()
   })
-  it('replaces markers on each update instead of accumulating them', () => {
+  it('replaces markers on each sync instead of accumulating them', () => {
     const provider = new NaverMapProvider(makeSdk(), document.createElement('div'), vi.fn())
-    provider.update([point], undefined, undefined, undefined, undefined, vi.fn())
+    provider.syncMarkers([point], undefined, undefined, undefined, undefined, vi.fn())
     const first = (provider as unknown as { markers: MockMarker[] }).markers[0]!
-    provider.update([], undefined, undefined, undefined, { latitude: 5, longitude: 6 }, vi.fn())
+    provider.syncMarkers([], undefined, undefined, undefined, { latitude: 5, longitude: 6 }, vi.fn())
     expect(first.removed).toBe(true)
     expect((provider as unknown as { markers: MockMarker[] }).markers).toHaveLength(1)
+  })
+})
+
+describe('NaverMapProvider frame (camera-only, called only for a new search result set or explicit locate)', () => {
+  it('fits bounds over points + location when more than one coordinate is present', () => {
+    const provider = new NaverMapProvider(makeSdk(), document.createElement('div'), vi.fn())
+    provider.frame([point], { latitude: 1, longitude: 2 })
+    expect((provider as unknown as { map: MockMap }).map.boundsFit).toBe(true)
+  })
+  it('pans and zooms to a single point when only one coordinate is present', () => {
+    const provider = new NaverMapProvider(makeSdk(), document.createElement('div'), vi.fn())
+    provider.frame([point], undefined)
+    const map = (provider as unknown as { map: MockMap }).map
+    expect(map.boundsFit).toBe(false); expect(map.zoom).toBe(10)
+  })
+  it('pans and zooms to a single location when there are no points', () => {
+    const provider = new NaverMapProvider(makeSdk(), document.createElement('div'), vi.fn())
+    provider.frame([], { latitude: 3, longitude: 4 })
+    const map = (provider as unknown as { map: MockMap }).map
+    expect(map.boundsFit).toBe(false); expect(map.zoom).toBe(10)
+  })
+  it('does nothing when there are no points and no location', () => {
+    const provider = new NaverMapProvider(makeSdk(), document.createElement('div'), vi.fn())
+    provider.frame([], undefined)
+    const map = (provider as unknown as { map: MockMap }).map
+    expect(map.boundsFit).toBe(false); expect(map.zoom).toBeUndefined(); expect(map.panned).toBeUndefined()
   })
 })
 

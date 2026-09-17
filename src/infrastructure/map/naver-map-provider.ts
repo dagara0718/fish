@@ -32,13 +32,12 @@ export class NaverMapProvider {
       if (coord) onBackgroundClick(coord)
     })
   }
-  update(points: OfficialFishingPointRef[], location: TransientCoordinates | undefined, selectedId: string | undefined, previewId: string | undefined, arbitrary: TransientCoordinates | undefined, onPreview: (point: OfficialFishingPointRef) => void) {
+  // Marker sync only — never touches the camera. Called on every preview/selection/arbitrary-click
+  // state change so that a user's own zoom/pan is never overwritten by an unrelated state update.
+  syncMarkers(points: OfficialFishingPointRef[], location: TransientCoordinates | undefined, selectedId: string | undefined, previewId: string | undefined, arbitrary: TransientCoordinates | undefined, onPreview: (point: OfficialFishingPointRef) => void) {
     this.clearMarkers()
-    const bounds = new this.sdk.LatLngBounds()
-    let extent = 0
     const add = (coords: TransientCoordinates, label: string, isPreview: boolean, click?: () => void) => {
       const position = new this.sdk.LatLng(coords.latitude, coords.longitude)
-      bounds.extend(position); extent += 1
       const content = document.createElement('span')
       content.className = isPreview ? 'map-marker map-marker--preview' : 'map-marker'
       content.textContent = label
@@ -53,8 +52,17 @@ export class NaverMapProvider {
     if (location) add(location, '◎ 현재 위치', false)
     points.forEach(point => add(point, `${point.officialPointId === selectedId ? '◆ 선택' : '● 공식 기준'} · ${point.placeName}`, point.officialPointId === previewId, () => onPreview(point)))
     if (arbitrary) add(arbitrary, '× 선택 위치', false)
+  }
+  // Camera-only — called only when the candidate set itself changes (a new search) or the user
+  // takes an explicit "현재 위치" action, never on preview/selection/arbitrary-click state changes.
+  frame(points: OfficialFishingPointRef[], location: TransientCoordinates | undefined) {
+    const bounds = new this.sdk.LatLngBounds()
+    let extent = 0
+    const consider = (coords: TransientCoordinates) => { bounds.extend(new this.sdk.LatLng(coords.latitude, coords.longitude)); extent += 1 }
+    if (location) consider(location)
+    points.forEach(consider)
     if (extent > 1) this.map.fitBounds(bounds)
-    else if (arbitrary || location || points[0]) { const p = arbitrary ?? location ?? points[0]!; this.map.panTo(new this.sdk.LatLng(p.latitude, p.longitude)); this.map.setZoom(10) }
+    else if (extent === 1) { const p = location ?? points[0]!; this.map.panTo(new this.sdk.LatLng(p.latitude, p.longitude)); this.map.setZoom(10) }
   }
   private clearMarkers() { this.markerListeners.forEach(listener => this.sdk.Event.removeListener(listener)); this.markers.forEach(marker => marker.setMap(null)); this.markerListeners = []; this.markers = [] }
   destroy() { this.clearMarkers(); this.sdk.Event.removeListener(this.backgroundListener); this.resize.disconnect(); this.map.destroy() }
