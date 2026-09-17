@@ -318,3 +318,12 @@ discards already-collected official points; (B) a stricter SpeciesProfile eviden
 namu.wiki/news/hobbyist source is never the sole basis for a numeric threshold, so five of six
 supported species lose their v1.4 threshold and now honestly resolve to INSUFFICIENT_EVIDENCE. NAVER
 map, the Worker's CORS/redirect/secret boundary, and KHOA parsing are unchanged in shape.
+
+# v1.6 governing delta
+
+The current user-approved scope is documented in [v1.6-product-delta.md](v1.6-product-delta.md). The KHOA
+tidal-current contract is now fully verified (not TBD) via research/marine-current-source-review.md.
+KhoaTidalCurrentProvider and a new Worker /api/marine-current route are built and tested against that
+verified contract, gated behind a separate credential (KHOA_MARINE_SERVICE_KEY) the user has not yet
+supplied. No SpeciesProfile has cited current-speed/direction evidence, so guidance factors stay
+UNKNOWN regardless of data connectivity. No live UI wiring this release (see delta doc rationale).

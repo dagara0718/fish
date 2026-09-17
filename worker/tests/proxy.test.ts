@@ -77,3 +77,67 @@ describe('Worker security boundary', () => {
     } finally { vi.useRealTimers() }
   })
 })
+
+describe('Worker marine current route', () => {
+  const marineKey = 'marine-test-only-secret'
+  const marineEnv = { ...env, KHOA_MARINE_SERVICE_KEY: marineKey }
+  const marineBody = { result: { data: [{ current_speed: '12.3', current_dir: '215', obs_date: '2026-09-16 12:00', type: '전류' }] } }
+  const marineQuery = 'SDate=20260916&SHour=11&SMinute=30&EDate=20260916&EHour=12&EMinute=30&lat=35.123&lon=129.456&ResultType=json'
+  const makeMarine = (query = marineQuery, origin = 'https://dagara0718.github.io') => new Request(`https://worker.example/api/marine-current?${query}`, { headers: { Origin: origin } })
+  const marineDeps = () => ({ fetch: vi.fn<typeof fetch>().mockResolvedValue(Response.json(marineBody)), now: () => new Date('2026-09-16T00:00:00Z') })
+
+  it('uses fixed KHOA marine upstream, rounds coordinates, encodes separate key once', async () => {
+    const d = marineDeps(); const response = await handleRequest(makeMarine(), marineEnv, d)
+    expect(response.status).toBe(200)
+    const url = new URL(String(d.fetch.mock.calls[0]![0]))
+    expect(url.origin + url.pathname).toBe('https://khoa.go.kr/oceandata/api/tidalCurrentPoint/search.do')
+    expect(url.searchParams.get('ServiceKey')).toBe(marineKey)
+    expect(url.searchParams.get('lat')).toBe('35.123'); expect(url.searchParams.get('lon')).toBe('129.456')
+    expect(await response.text()).not.toContain(marineKey)
+  })
+  it('returns NOT_CONFIGURED when KHOA_MARINE_SERVICE_KEY is unset (no fabricated key)', async () => {
+    expect((await handleRequest(makeMarine(), env, marineDeps())).status).toBe(503)
+  })
+  it.each([
+    'SDate=bad&SHour=11&SMinute=30&EDate=20260916&EHour=12&EMinute=30&lat=35&lon=129',
+    'SDate=20260916&SHour=24&SMinute=30&EDate=20260916&EHour=12&EMinute=30&lat=35&lon=129',
+    'SDate=20260916&SHour=11&SMinute=60&EDate=20260916&EHour=12&EMinute=30&lat=35&lon=129',
+    'SDate=20260916&SHour=11&SMinute=30&EDate=20260916&EHour=12&EMinute=30&lat=91&lon=129',
+    'SDate=20260916&SHour=11&SMinute=30&EDate=20260916&EHour=12&EMinute=30&lat=35&lon=181',
+    'SDate=20260916&SHour=11&SMinute=30&EDate=20260916&EHour=12&EMinute=30&lat=35&lon=129&ResultType=xml',
+    'SDate=20260916&SHour=11&SMinute=30&EDate=20260916&EHour=12&EMinute=30&lat=35&lon=129&extra=1',
+  ])('rejects invalid marine params: %s', async query => {
+    const d = marineDeps(); expect((await handleRequest(makeMarine(query), marineEnv, d)).status).toBe(400); expect(d.fetch).not.toHaveBeenCalled()
+  })
+  it('cache key never contains the exact GPS coordinate beyond 3dp or the secret', async () => {
+    const put = vi.fn().mockResolvedValue(undefined)
+    const d = { ...marineDeps(), cache: { match: vi.fn().mockResolvedValue(undefined), put } }
+    await handleRequest(makeMarine('SDate=20260916&SHour=11&SMinute=30&EDate=20260916&EHour=12&EMinute=30&lat=35.123456&lon=129.654321&ResultType=json'), marineEnv, d)
+    const cacheKeyUrl = String(put.mock.calls[0]![0].url)
+    expect(cacheKeyUrl).toContain('lat=35.123'); expect(cacheKeyUrl).not.toContain('35.123456')
+    expect(cacheKeyUrl).not.toContain(marineKey)
+  })
+  it('does not retry inside the Worker (single upstream attempt, client owns retry)', async () => {
+    const d = marineDeps(); d.fetch.mockResolvedValue(new Response(null, { status: 500 }))
+    await handleRequest(makeMarine(), marineEnv, d)
+    expect(d.fetch).toHaveBeenCalledTimes(1)
+  })
+  it('classifies marine upstream failure and redacts the marine secret from error bodies', async () => {
+    const d = marineDeps(); d.fetch.mockResolvedValue(new Response(marineKey, { status: 500 }))
+    const result = await handleRequest(makeMarine(), marineEnv, d)
+    expect(result.status).toBe(502); expect(await result.text()).not.toContain(marineKey)
+  })
+  it('fails closed on malformed (non-JSON content-type) marine response', async () => {
+    const d = marineDeps(); d.fetch.mockResolvedValue(new Response('{}', { headers: { 'Content-Type': 'text/html' } }))
+    expect((await handleRequest(makeMarine(), marineEnv, d)).status).toBe(502)
+  })
+  it('rejects foreign origin for the marine route too', async () => {
+    expect((await handleRequest(makeMarine(marineQuery, 'https://evil.example'), marineEnv, marineDeps())).status).toBe(403)
+  })
+  it('/health reports marineReady additively without changing the existing ready field', async () => {
+    const withoutMarine = await handleRequest(new Request('https://worker.example/health', { headers: { Origin: 'https://dagara0718.github.io' } }), env, marineDeps())
+    expect(await withoutMarine.json()).toMatchObject({ ready: true, marineReady: false })
+    const withMarine = await handleRequest(new Request('https://worker.example/health', { headers: { Origin: 'https://dagara0718.github.io' } }), marineEnv, marineDeps())
+    expect(await withMarine.json()).toMatchObject({ ready: true, marineReady: true })
+  })
+})

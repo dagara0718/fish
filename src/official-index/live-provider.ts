@@ -39,8 +39,8 @@ export function normalizeOfficial(items: OfficialItem[], point: OfficialFishingP
 // already-collected catalog. See v1.5-product-delta.md "Retry policy".
 export type FailureClass = 'ABORT' | 'RETRY' | 'FATAL'
 const RETRYABLE_STATUS = new Set([429, 500, 503, 504])
-const MAX_ATTEMPTS = 3
-const BACKOFF_MS = [250, 750]
+export const MAX_ATTEMPTS = 3
+export const BACKOFF_MS = [250, 750]
 
 export async function classifyFailure(response: Response | undefined, error: unknown, externalSignal: AbortSignal | undefined): Promise<FailureClass> {
   if (externalSignal?.aborted) return 'ABORT'
@@ -61,6 +61,32 @@ function log(event: LogEvent, fields: { fishingType?: FishingType; pageNumber?: 
   console.debug(`[catalog] ${event}`, JSON.stringify(fields))
 }
 
+// Shared bounded-retry helper (v1.5, reused by v1.6's marine provider per REQ-FUNC-MARINE-006 — "no
+// duplicate retry helper per API"). Returns undefined when attempts are exhausted or the failure is
+// fatal; throws only on external abort, matching the existing cancellation semantics.
+export async function fetchWithRetry(
+  request: typeof fetch,
+  url: string | URL,
+  buildInit: () => RequestInit,
+  signal: AbortSignal | undefined,
+  sleep: (ms: number) => Promise<void>,
+  onRetry?: (attempt: number, httpClass: string, elapsedMs: number) => void,
+): Promise<Response | undefined> {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const started = Date.now()
+    let response: Response | undefined
+    let thrown: unknown
+    try { response = await request(url, buildInit()) } catch (error) { thrown = error }
+    if (response?.ok) return response
+    const outcome = await classifyFailure(response, thrown, signal)
+    if (outcome === 'ABORT') throw thrown ?? new Error('ABORTED')
+    onRetry?.(attempt, response?.status ? String(response.status) : 'NETWORK_ERROR', Date.now() - started)
+    if (outcome === 'FATAL' || attempt === MAX_ATTEMPTS) return undefined
+    await sleep(BACKOFF_MS[attempt - 1]! + Math.random() * 100)
+  }
+  return undefined
+}
+
 export class LiveOfficialFishingIndexProvider implements OfficialFishingIndexProvider {
   private cache = new Map<string, OfficialIndexResult>()
   private catalogCache = new Map<FishingType, { points: OfficialFishingPointRef[]; fetchedAt: number }>()
@@ -78,26 +104,16 @@ export class LiveOfficialFishingIndexProvider implements OfficialFishingIndexPro
     if (base.username || base.password || base.search || base.hash || (base.protocol !== 'https:' && !(base.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(base.hostname)))) throw new Error('NOT_CONFIGURED')
     const url = new URL('/api/fishing-index', base)
     url.search = new URLSearchParams({ gubun: fishingType, reqDate: seoulDate(), pageNo: String(page), numOfRows: '300', ...(name ? { placeName: name } : {}) }).toString()
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const started = Date.now()
-      let response: Response | undefined
-      let thrown: unknown
-      try {
-        const timeout = AbortSignal.timeout(12000)
-        response = await this.request(url, { signal: signal ? AbortSignal.any([signal, timeout]) : timeout, credentials: 'omit', referrerPolicy: 'no-referrer' })
-      } catch (error) { thrown = error }
-      if (response?.ok) {
-        let data
-        try { data = parseEnvelope(await response.json()) } catch { return { ok: false } } // malformed body: fatal, no retry
-        return { ok: true, items: data.items, totalCount: data.totalCount }
-      }
-      const outcome = await classifyFailure(response, thrown, signal)
-      if (outcome === 'ABORT') throw thrown ?? new Error('ABORTED')
-      log('catalog_page_retry', { fishingType, pageNumber: page, attempt, httpClass: response?.status ? String(response.status) : 'NETWORK_ERROR', elapsedMs: Date.now() - started })
-      if (outcome === 'FATAL' || attempt === MAX_ATTEMPTS) return { ok: false }
-      await this.sleep(BACKOFF_MS[attempt - 1]! + Math.random() * 100)
-    }
-    return { ok: false }
+    const response = await fetchWithRetry(
+      this.request, url,
+      () => { const timeout = AbortSignal.timeout(12000); return { signal: signal ? AbortSignal.any([signal, timeout]) : timeout, credentials: 'omit', referrerPolicy: 'no-referrer' } },
+      signal, this.sleep,
+      (attempt, httpClass, elapsedMs) => log('catalog_page_retry', { fishingType, pageNumber: page, attempt, httpClass, elapsedMs }),
+    )
+    if (!response) return { ok: false }
+    let data
+    try { data = parseEnvelope(await response.json()) } catch { return { ok: false } } // malformed body: fatal, no retry
+    return { ok: true, items: data.items, totalCount: data.totalCount }
   }
 
   // Collects every expected page for a catalog listing (name === undefined) or the single filtered

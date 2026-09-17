@@ -14,17 +14,39 @@ implementing it — this documents candidates and a NOT_CONNECTED decision for t
   automated fetch in this session — `TBD_PROVIDER_CONFIRMATION`, same convention as the v1.1 KHOA
   research note).
 
-### 국립해양조사원 수치조류도 지점별 최강창낙조 (Numerical tidal-current chart, peak flood/ebb by point)
-- Catalog listing: [해양수산부 국립해양조사원_수치조류도 지점별 최강창낙조](https://www.data.go.kr/data/15039013/openapi.do)
-- Provider: 해양수산부 국립해양조사원 (해양예보과)
-- Request parameters (from catalog page): 검색 시작/종료 날짜·시간·분, 대상 지점 위도·경도.
-- Response fields: 시간별 조류 종류, 예측 유속, **유향(방향) 포함** — this is the one candidate that
-  explicitly claims directional current data, not just speed.
-- Auth: 공공데이터포털 서비스키 신청 필요(개인/프로젝트 구분), 자동승인.
-- License: 공공저작물 출처표시 제1유형. Format: JSON+XML.
-- Not confirmed: 좌표 단위(위경도 십진수 여부), spatial resolution(관측점 기반인지 격자 기반인지),
-  update frequency(예보 주기), CORS policy for browser calls, whether values are forecast vs
-  observation. `TBD_PROVIDER_CONFIRMATION` for all of these.
+### 국립해양조사원 수치조류도 지점별 최강창낙조 (Numerical tidal-current chart, peak flood/ebb by point) — CONTRACT VERIFIED 2026-09-17
+
+The data.go.kr catalog listing (`https://www.data.go.kr/data/15039013/openapi.do`) is a **LINK-type**
+entry — 공간범위/시간범위 both blank, no Swagger/parameter table rendered there (confirmed by loading
+the page in a real browser and reading the rendered DOM, not just a static fetch). Its "바로가기"
+button redirects to KHOA's own portal, which is where the real, complete contract lives:
+
+- **Portal**: 바다누리 해양정보 서비스 (khoa.go.kr), 오픈API 목록, "수치조류도 지점별 최강창낙조"
+  (`https://www.khoa.go.kr/oceandata/openapi/openApiDetail.do?id=18`)
+- **Endpoint**: `https://khoa.go.kr/oceandata/api/tidalCurrentPoint/search.do` (REST, GET, JSON/XML)
+- **Description (official, verbatim)**: "수치조류도 예측 유향,유속을 검색한날짜 및 영역에 해당되는
+  데이터를 10분단위로 조회한다. 입력 지점에서 가장 가까운 지점(최대 1km)의 10분단위 최강창낙조
+  데이터를 기반으로 계산된 데이터를 제공합니다." — this settles three open questions at once:
+  **PREDICTED** (예측), nearest-point matching **within 1km max**, 10-minute resolution.
+- **Request parameters**: `ServiceKey`, `SDate`/`SHour`(00-23)/`SMinute`(00-59), `EDate`/`EHour`/
+  `EMinute`, `lon`, `lat` (decimal degree, sample `126.5`/`36`), `ResultType`(`json`|`xml`).
+- **Response fields**: `sch_Stime`/`sch_Etime` (echoed range), `lon`/`lat` (echoed), `obs_last_req_cnt`
+  ("남은요청수/할당요청수" — e.g. `"800/20000"`, i.e. the response itself reports remaining daily
+  quota), `obs_date` (예측일시, `YYYY-MM-DD HH:mm:ss`), `type` (조류종류: `전류`=general/instantaneous
+  current, `최강창조류`=peak flood current, `최강낙조류`=peak ebb current), `current_speed`
+  (**cm/s**, confirmed unit), `current_dir` (**deg**, confirmed unit; sample values `128.06`/`40`/
+  `321` — 0-360 range consistent with compass bearing, but the page does **not** state whether this
+  is "flowing toward" or "flowing from" — direction convention stays UNKNOWN pending a stronger
+  citation, per §11 of the v1.6 prompt).
+- **Auth is a SEPARATE key system from `KHOA_FISHING_SERVICE_KEY`**: 바다누리's own "인증키발급/관리"
+  flow requires a khoa.go.kr account, a written 사용목적/서비스/사용기관/사용URL application, and terms
+  agreement — it is not a 공공데이터포털 general service key. Quota shown on the key-request page:
+  1년 사용기간, 하루 최대 10,000건 (differs from the `20000` seen in the sample response — quota tier
+  may vary by application). **Do not assume `KHOA_FISHING_SERVICE_KEY` works here** — a distinct
+  secret (`KHOA_MARINE_SERVICE_KEY` or equivalent) requires the user's own registration.
+- License: 공공저작물 출처표시 제1유형, 무료, 자동승인(개발/운영 단계 모두).
+- CORS: not stated on either page; must be assumed unverified until an authenticated browser/Worker
+  call is actually made — same standard already applied twice to KHOA fishing-index in this project.
 
 ### 국립해양조사원 격자별 해양정보
 - Catalog listing: [해양수산부 국립해양조사원_격자별 해양정보](https://www.data.go.kr/data/15002010/openapi.do)
@@ -41,30 +63,44 @@ implementing it — this documents candidates and a NOT_CONNECTED decision for t
   of locations, so joining the two would need a separate nearest-station mapping — out of scope for
   v1.4 either way.
 
-## Decision for v1.4
+## Decision for v1.4 (superseded by v1.6, see below)
 
-No directional current/water-mass source is connected in this release. Rationale:
-- The one candidate that explicitly claims direction (수치조류도 API) has unconfirmed spatial
-  resolution, update cadence, and CORS/browser-suitability — connecting it without that contract would
-  repeat the same category of mistake this session already found and fixed twice in the KHOA
-  integration (unverified response shape, unverified runtime behavior).
-- No SpeciesProfile evidence in `species-environment-evidence.md` documents a direction-dependent
-  threshold for any of the 6 supported species; even with a working current-direction feed, there is
-  nothing yet to compare it against.
-- `minCrsp`/`maxCrsp` in the existing KHOA fishing-index response is speed-only (see
-  `contracts/official-fishing-index.md`); this v1.4 delta does not reinterpret it as direction, and
-  does not use it as a species-suitability input either (§ species-environment-evidence.md "공통
-  불확실성").
+No directional current/water-mass source was connected in v1.4. `MarineCurrentProvider` shipped as a
+typed boundary with a single implementation, `NotConnectedMarineCurrentProvider`, always resolving
+`{ status: 'NOT_CONNECTED' }`.
 
-`MarineCurrentProvider` is declared as a typed boundary (`src/species-guidance/contracts.ts`) with a
-single implementation, `NotConnectedMarineCurrentProvider`, that always resolves
-`{ status: 'NOT_CONNECTED' }`. The UI states this explicitly ("해류 방향 데이터는 현재 판단에
-포함되지 않았습니다") rather than omitting the row silently, so a future direction feed can be added
-without a contract change to the detail panel.
+## v1.6 decision: contract verified, blocked on the user's own key (not on the contract)
+
+Unlike the v1.4 pass, the 수치조류도 지점별 최강창낙조 contract is now **fully verified** against
+KHOA's own portal (not a search-engine summary) — endpoint, every request parameter, every response
+field, units, and the observation/forecast distinction are all confirmed above. This clears the v1.4
+blocker ("unconfirmed spatial resolution, update cadence"): resolution is 10-minute, nearest-point
+matching is bounded to 1km, and values are explicitly predicted (예측), not observed.
+
+What remains genuinely unconfirmed and is **not guessed**:
+- **Direction convention** ("flowing toward" vs "flowing from", true-north vs magnetic) — the KHOA
+  page states the unit (deg) but not the convention. `MarineCurrentObservation.directionConvention`
+  stays `'UNKNOWN'` until a stronger citation is found; the UI must never label a bearing as if the
+  convention were confirmed.
+- **CORS** for a direct browser call — untested; the Worker route added in v1.6 proxies it the same
+  way `/api/fishing-index` already does, so this is moot for the shipped implementation regardless.
+- **SpeciesProfile evidence**: a second targeted search this pass (참돔 조류 유속) found only the same
+  qualitative "조류가 좋은 곳" habitat description already in `species-profiles.ts` — no numeric
+  current-speed/direction threshold for any of the 6 supported species. `CURRENT_SPEED` and
+  `CURRENT_DIRECTION` factors therefore stay `UNKNOWN` for every species even once real data flows —
+  this is unchanged from v1.5 and is not a defect (§33/34 of the v1.6 prompt).
+
+**What blocks going live is exclusively the credential**: 바다누리's key-issuance system is separate
+from `KHOA_FISHING_SERVICE_KEY` and requires the user's own khoa.go.kr account and a written
+application (사용목적/서비스/사용기관/사용URL) — see the contract section above. No account or key was
+created or guessed. `KhoaTidalCurrentProvider` and the Worker's `/api/marine-current` route are
+implemented and tested end-to-end against the verified contract (sanitized fixtures matching KHOA's
+own published sample data), gated behind `KHOA_MARINE_SERVICE_KEY`; without that secret set, the route
+returns the same `NOT_CONFIGURED` response the fishing-index route already used before its own key was
+registered — a precedent, not a new pattern.
 
 ## Revisit trigger
 
-Reopen this review only after: (1) the 수치조류도 API's parameter/response contract is verified
-against a real authenticated call (same standard applied to KHOA in this session), and (2) at least
-one SpeciesProfile in `species-profiles.ts` has a direction-dependent claim backed by a cited source.
-Until both hold, do not wire a real `MarineCurrentProvider` implementation.
+Reopen only to: (1) find a citable direction-convention source, or (2) find species-level current
+evidence strong enough to activate a guidance factor. The contract itself does not need re-verification
+unless KHOA changes it.

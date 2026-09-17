@@ -285,3 +285,39 @@ Species evidence: profileVersion bumped to 2026-09-v2. 우럭/감성돔/농어/�
 namu.wiki/news/hobbyist-sourced numeric thresholds and now resolve to INSUFFICIENT_EVIDENCE; only 참돔
 retains a peer-reviewed/academic-backed claim. This is the intended, documented result of the v1.5
 evidence bar, not a regression — see research/species-environment-evidence.md for the full audit.
+
+- [X] T091 Research Gate - verify KHOA tidal current point contract via KHOA's own portal (real
+  browser render, not a static fetch); Blocks: T092.
+- [X] T092 v1.6 product delta + domain contracts (MarineCurrentObservation, CurrentType,
+  ObservationType, MarineDataStatus, extended MarineCurrentProvider) in
+  src/species-guidance/contracts.ts; Depends on: T091; Blocks: T093.
+- [X] T093 KhoaTidalCurrentProvider + normalizeTidalCurrent in
+  src/species-guidance/khoa-tidal-current-provider.ts, reusing fetchWithRetry exported from
+  src/official-index/live-provider.ts - no duplicate retry logic; REQ-FUNC-MARINE-001~006;
+  Depends on: T092; Blocks: T095.
+- [X] T094 Worker /api/marine-current route in worker/src/index.ts - fixed KHOA upstream, its own
+  param allowlist, server-side coordinate rounding to 3dp, KHOA_MARINE_SERVICE_KEY-gated,
+  redirect manual, existing CORS origins only, no worker-side retry (client owns it); Depends on:
+  T092; Blocks: T095.
+- [X] T095 Tests: normalizeTidalCurrent (well-formed/malformed/partial/empty), provider
+  (coordinate rounding, retry reuse, NOT_CONNECTED on 503, exhaustion, malformed body), Worker route
+  (fixed upstream, param validation, NOT_CONFIGURED, no worker-side retry, secret redaction, cache
+  key excludes exact GPS/secret, foreign origin, /health additive marineReady); Depends on:
+  T093/T094; Blocks: T096.
+- [X] T096 Full verification gate (root typecheck/lint/test/test:e2e/build/secret:scan; worker
+  test/typecheck) + analyze re-run; Depends on: T095; Blocks: T097.
+- [ ] T097 Commit/push main; verify Pages/Worker health; Depends on: T096.
+
+## v1.6 status (2026-09-17)
+
+T091-T096 complete; T097 pending commit/push. Analyze: CRITICAL 0, HIGH 0
+(specs/001-point-decision-brief/v1.6-analyze.md). The KHOA tidal current contract is fully verified
+against KHOA's own portal - a first for this feature area after two prior versions (v1.4/v1.5)
+stalled at TBD_PROVIDER_CONFIRMATION. KhoaTidalCurrentProvider and the Worker's /api/marine-current
+route are built and tested end-to-end against the verified contract shape, but gated behind
+KHOA_MARINE_SERVICE_KEY - a separate khoa.go.kr credential this session cannot fabricate. No live UI
+wiring this release (deliberate scope decision, see v1.6-product-delta.md). One real bug was found
+during this pass's own test-writing (not a synthetic edge case): the shared retry helper classifies
+upstream 503 as retryable, so the provider's original `response.status === 503` NOT_CONNECTED check
+was dead code, since retry exhaustion always discards the final response object - fixed by threading
+the last-seen httpClass through the existing onRetry callback instead of diverging the shared helper.

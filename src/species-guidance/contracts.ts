@@ -66,14 +66,45 @@ export interface SpeciesGuidanceProvider {
   getGuidance(point: OfficialFishingPointRef): EnvironmentBasedSpeciesGuidance[]
 }
 
-// KHOA's minCrsp/maxCrsp is speed-only (no direction) per the verified contract. No code path may
-// infer a direction from it. This boundary exists so a future directional source can be added
-// without changing the detail panel's rendering contract — see
-// specs/001-point-decision-brief/research/marine-current-source-review.md.
-export interface MarineCurrentStatus { status: 'NOT_CONNECTED' }
+// v1.6: the KHOA 수치조류도 contract is verified (research/marine-current-source-review.md) — speed
+// (cm/s) and a numeric bearing (deg) are both provided, but the bearing's convention ("flowing
+// toward" vs "flowing from", true vs magnetic north) is not stated anywhere in the official contract.
+// directionConvention therefore stays 'UNKNOWN' unconditionally; no code path may assume one.
+export type CurrentType = 'INSTANTANEOUS' | 'PEAK_FLOOD' | 'PEAK_EBB' // 전류 / 최강창조류 / 최강낙조류
+export type ObservationType = 'OBSERVED' | 'FORECAST' | 'MODELLED'
+export type MarineDataStatus = 'SUCCESS' | 'PARTIAL' | 'STALE' | 'UNAVAILABLE' | 'UNSUPPORTED_AREA' | 'NOT_CONNECTED'
+
+export interface MarineCurrentObservation {
+  sourceType: 'TIDAL_CURRENT'
+  sourceName: string
+  latitude: number
+  longitude: number
+  currentType: CurrentType
+  speed?: number
+  speedUnit?: 'cm/s'
+  direction?: number
+  directionUnit?: 'deg'
+  directionConvention: 'UNKNOWN'
+  observationType: ObservationType
+  // KHOA matches the nearest point within a stated 1km bound but never echoes that matched point's
+  // own coordinate — so a real distance cannot be computed. This states the contract's own bound
+  // instead of a fabricated "N km away" figure.
+  spatialReference: string
+  forecastAt: string
+  sourceTimestamp: string
+  trustStatus: TrustStatus
+}
+
+export interface MarineCurrentResult {
+  status: MarineDataStatus
+  observations: MarineCurrentObservation[]
+  reason?: string
+}
+
+export interface MarineCurrentQuery { latitude: number; longitude: number; at?: Date }
 export interface MarineCurrentProvider {
-  getCurrentDirection(point: OfficialFishingPointRef, signal?: AbortSignal): Promise<MarineCurrentStatus>
+  getCurrentObservations(query: MarineCurrentQuery, signal?: AbortSignal): Promise<MarineCurrentResult>
 }
 export class NotConnectedMarineCurrentProvider implements MarineCurrentProvider {
-  async getCurrentDirection(): Promise<MarineCurrentStatus> { return { status: 'NOT_CONNECTED' } }
+  async getCurrentObservations(): Promise<MarineCurrentResult> { return { status: 'NOT_CONNECTED', observations: [] } }
 }
