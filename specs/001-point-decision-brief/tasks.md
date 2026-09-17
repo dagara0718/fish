@@ -306,11 +306,11 @@ evidence bar, not a regression — see research/species-environment-evidence.md 
   T093/T094; Blocks: T096.
 - [X] T096 Full verification gate (root typecheck/lint/test/test:e2e/build/secret:scan; worker
   test/typecheck) + analyze re-run; Depends on: T095; Blocks: T097.
-- [ ] T097 Commit/push main; verify Pages/Worker health; Depends on: T096.
+- [X] T097 Commit/push main; verify Pages/Worker health; Depends on: T096.
 
 ## v1.6 status (2026-09-17)
 
-T091-T096 complete; T097 pending commit/push. Analyze: CRITICAL 0, HIGH 0
+T091-T097 complete. Analyze: CRITICAL 0, HIGH 0
 (specs/001-point-decision-brief/v1.6-analyze.md). The KHOA tidal current contract is fully verified
 against KHOA's own portal - a first for this feature area after two prior versions (v1.4/v1.5)
 stalled at TBD_PROVIDER_CONFIRMATION. KhoaTidalCurrentProvider and the Worker's /api/marine-current
