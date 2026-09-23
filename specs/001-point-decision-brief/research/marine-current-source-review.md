@@ -104,3 +104,18 @@ registered — a precedent, not a new pattern.
 Reopen only to: (1) find a citable direction-convention source, or (2) find species-level current
 evidence strong enough to activate a guidance factor. The contract itself does not need re-verification
 unless KHOA changes it.
+
+## v1.6.3 addendum (2026-09-24)
+
+- **Time basis — still TBD.** Re-checked KHOA's API page (rendered in a real browser) and the
+  data.go.kr listing `15039013`: neither states whether `SDate/SHour/SMinute` or `obs_date` are KST or
+  UTC. A live call cannot settle it (windows at UTC-now and KST-now both return rows). Not guessed; see
+  `v1.6.3-product-delta.md` REQ-FUNC-MARINE-UI-005 for how the client copes. Settling it needs an
+  authoritative KHOA statement, or a cross-check of this API's labeled peak/turn times against a
+  KHOA-published KST 조류표 for the same location.
+- **`전류` correction.** The contract section above glosses `전류` as "general/instantaneous current".
+  Live rows show `전류` at ~2 cm/s between a 최강낙조류 and a 최강창조류, consistent with 전류(轉流),
+  the turn of the tidal current. Enum renamed `SLACK`; UI shows KHOA's label verbatim.
+- **`type` mostly empty**: 58/61 rows in a 10 h window had `type: ""`; only event rows are labeled.
+- **Numeric fields**: via the proxy, `current_speed`/`current_dir` arrive as numbers.
+- **Out-of-coverage**: an inland coordinate yields proxy `502 MALFORMED_RESPONSE` (not an empty list).

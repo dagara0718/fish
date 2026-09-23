@@ -151,3 +151,14 @@ Invariants:
 
 Trace: `REQ-NFR-PERF-001`, `REQ-NFR-OBS-001`, `REQ-NFR-PRIV-001~002`,
 `REQ-NFR-COST-001`.
+
+## MarineCurrentProvider (v1.6.3)
+
+`getCurrentObservations({ latitude, longitude, at? }, signal)` — called only for an explicitly
+selected official point's own coordinate. Resolves `NOT_CONNECTED` for an unset/invalid base URL or a
+proxy 503, `UNAVAILABLE` after bounded retry/fatal failure, `SUCCESS`/`PARTIAL` otherwise; rejects only
+on abort. Request window = `requestWindow(at)`: UTC-wall(at − 30 min) → KST-wall(at + 30 min), because
+the KHOA time basis is undocumented. Every observation: `observationType: 'FORECAST'`,
+`directionConvention: 'UNKNOWN'`, `timeBasis: 'UNCONFIRMED'`, `trustStatus: 'UNVERIFIED'`.
+
+Trace: `REQ-FUNC-MARINE-001~006`, `REQ-FUNC-MARINE-UI-001~007`, `REQ-NFR-MARINE-001~004`.

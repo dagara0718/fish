@@ -321,3 +321,13 @@ during this pass's own test-writing (not a synthetic edge case): the shared retr
 upstream 503 as retryable, so the provider's original `response.status === 503` NOT_CONNECTED check
 was dead code, since retry exhaustion always discards the final response object - fixed by threading
 the last-seen httpClass through the existing onRetry callback instead of diverging the shared helper.
+
+# v1.6.3 Tasks — tidal-current forecast in the live brief
+
+- [X] T098 Review uncommitted v1.6.3 draft; re-verify KHOA time-basis documentation (TBD) and live response shape (empty type, 전류 meaning, numeric fields); v1.6.3 product delta; REQ-FUNC-MARINE-UI-001~007, REQ-NFR-MARINE-004; Blocks: T099.
+- [X] T099 Provider: `requestWindow` covering both KST/UTC readings, `timeBasis: 'UNCONFIRMED'`, `NOT_CONNECTED` for unset/invalid base URL, `SLACK` rename, numeric fields, empty-type preservation in src/species-guidance/*; REQ-FUNC-MARINE-UI-005~006, REQ-NFR-MARINE-004; Depends on: T098; Blocks: T100.
+- [X] T100 MarineCurrentPanel finite states, TrustBadge, provenance, keyboard 근거 보기, staleness, marine-only retry in src/features/official-index/MarineCurrentPanel.tsx, src/styles/global.css; REQ-FUNC-MARINE-UI-002~003,007; Depends on: T099; Blocks: T102.
+- [X] T101 LiveApp: independent marine AbortController, cancel on navigation/unmount, explicit-selection-only trigger, official coordinate only; `VITE_MARINE_API_BASE_URL` in deploy-pages.yml; REQ-FUNC-MARINE-UI-001,004, REQ-NFR-MARINE-004; Depends on: T099; Blocks: T102.
+- [X] T102 Tests: provider window/NOT_CONNECTED/abort/numeric, panel states, E2E (no call before selection, no GPS, failure isolation, marine-only retry, race, cancel, keyboard, overflow, screenshots); Depends on: T100/T101; Blocks: T103.
+- [X] T103 Full verification gate + Desktop/Mobile visual review + v1.6.3 analyze; Depends on: T102; Blocks: T104.
+- [ ] T104 Commit/push main; verify Pages deploy and a live marine lookup in the deployed page; Depends on: T103.

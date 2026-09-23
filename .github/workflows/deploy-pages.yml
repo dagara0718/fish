@@ -39,6 +39,10 @@ jobs:
         env:
           VITE_NAVER_MAP_NCP_KEY_ID: ${{ secrets.NAVER_MAP_NCP_KEY_ID }}
           VITE_FISHING_API_BASE_URL: ${{ vars.FISHING_API_BASE_URL }}
+          # Public API base URL, not a secret — the alternate marine proxy (v1.6.2), a separate
+          # backend from the Cloudflare Worker above. KHOA_MARINE_SERVICE_KEY itself never enters
+          # this build; it lives only as a Vercel server-side environment variable.
+          VITE_MARINE_API_BASE_URL: ${{ vars.MARINE_API_BASE_URL }}
       - name: Frontend secret scan
         run: npm run secret:scan
       - name: Configure Pages

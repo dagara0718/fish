@@ -64,3 +64,13 @@ npm run live:check
 검사는 키 값을 출력하지 않습니다. health 성공은 설정 존재 확인이며 NAVER 인증이나 실제 KHOA 조회 성공의 대체 증거가 아닙니다. 브라우저에서 지도, 검색→후보→명시적 선택→공식 지수를 확인하세요. Live 실패 시 Demo로 자동 대체하지 않습니다. Demo는 사용자가 직접 선택해야 합니다.
 
 배포 주소: https://dagara0718.github.io/fish/
+
+## 조류 예측 (v1.6.3)
+
+조류 예측은 바다낚시지수 Worker와 **별도 backend**(Vercel marine proxy)를 사용합니다.
+
+- GitHub Actions Repository **Variable** `MARINE_API_BASE_URL` = `https://marine-proxy-nu.vercel.app` (키가 아닌 공개 주소). 빌드 시 `VITE_MARINE_API_BASE_URL`로 주입됩니다. 로컬은 `.env.local`의 `VITE_MARINE_API_BASE_URL`.
+- `KHOA_MARINE_SERVICE_KEY`는 Vercel 서버 환경변수에만 둡니다. 바다누리(khoa.go.kr) 별도 발급 키이며 공공데이터포털 바다낚시지수 키와 같다고 가정하지 않습니다. frontend env에 넣지 않습니다.
+- 미설정이면 패널은 "조류 예측 데이터 연결이 설정되지 않았습니다"를 표시합니다(Demo 대체 없음).
+- 제공기관은 예측일시의 시간대(KST/UTC)를 명시하지 않습니다(TBD). 앱은 두 해석 모두 현재 시각을 포함하는 구간을 조회하고, 특정 행을 "현재"로 표시하지 않습니다.
+- `/api/health`의 `marineReady: true`는 키 설정 여부일 뿐 실제 KHOA 조회 성공의 증거가 아닙니다.

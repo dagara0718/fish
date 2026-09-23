@@ -420,3 +420,12 @@ KhoaTidalCurrentProvider and a new Worker /api/marine-current route are built an
 verified contract, gated behind a separate credential (KHOA_MARINE_SERVICE_KEY) the user has not yet
 supplied. No SpeciesProfile has cited current-speed/direction evidence, so guidance factors stay
 UNKNOWN regardless of data connectivity. No live UI wiring this release (see delta doc rationale).
+
+# v1.6.3 governing delta
+
+The current user-approved scope is documented in [v1.6.3-product-delta.md](v1.6.3-product-delta.md)
+(REQ-FUNC-MARINE-UI-001~007, REQ-NFR-MARINE-004). The live brief now shows the selected official
+point's KHOA tidal-current forecast via the Vercel marine proxy (`VITE_MARINE_API_BASE_URL`),
+fetched independently of the official index. The request/response time basis is undocumented and
+stays TBD (`timeBasis: 'UNCONFIRMED'`); the request window covers the present under both KST and UTC
+readings and no row is presented as "now". Species guidance is unchanged.

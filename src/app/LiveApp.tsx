@@ -7,12 +7,20 @@ import { distanceKm, rankLocationCandidates, type TransientCoordinates } from '.
 import { PointMap } from '../features/point-discovery/PointMap'
 import { OfficialIndexPanel } from '../features/official-index/OfficialIndexPanel'
 import { AccessStatusPanel } from '../features/official-index/AccessStatusPanel'
+import { MarineCurrentPanel } from '../features/official-index/MarineCurrentPanel'
 import { SearchForm } from '../features/point-discovery/SearchForm'
+import { KhoaTidalCurrentProvider } from '../species-guidance/khoa-tidal-current-provider'
+import type { MarineCurrentResult } from '../species-guidance/contracts'
 
 const NEAREST_CANDIDATE_LIMIT = 5
 
 export function LiveApp() {
   const [provider] = useState(() => new LiveOfficialFishingIndexProvider(import.meta.env.VITE_FISHING_API_BASE_URL ?? ''))
+  // Deliberately a separate base URL/provider from the fishing-index Worker above — v1.6.2's
+  // alternate proxy is a different backend on a different host (see v1.6.2-result.md). An unset
+  // VITE_MARINE_API_BASE_URL surfaces as NOT_CONNECTED (shown as "not configured"), never a silent
+  // fallback to demo data.
+  const [marineProvider] = useState(() => new KhoaTidalCurrentProvider(import.meta.env.VITE_MARINE_API_BASE_URL ?? ''))
   const [accessProvider] = useState(() => new UnverifiedFishingAccessProvider())
   const [query, setQuery] = useState('')
   const [type, setType] = useState<FishingType>('갯바위')
@@ -23,25 +31,42 @@ export function LiveApp() {
   const [preview, setPreview] = useState<OfficialFishingPointRef>()
   const [selected, setSelected] = useState<OfficialFishingPointRef>()
   const [result, setResult] = useState<OfficialIndexResult>()
+  const [marineResult, setMarineResult] = useState<MarineCurrentResult>()
+  const [marineBusy, setMarineBusy] = useState(false)
   const [accessStatus, setAccessStatus] = useState<FishingAccessStatus>()
   const [message, setMessage] = useState('포인트명으로 공식 기준 포인트를 검색해 주세요.')
   const [busy, setBusy] = useState(false)
   const [view, setView] = useState<'list' | 'map'>('list')
   const request = useRef<AbortController | null>(null)
+  // Marine has its own controller so a marine-only retry never cancels the official-index request,
+  // while every navigation (start()) and unmount still cancels both (v1.6.3 REQ-FUNC-MARINE-UI-004).
+  const marineRequest = useRef<AbortController | null>(null)
   const alive = useRef(true)
-  useEffect(() => { alive.current = true; return () => { alive.current = false; request.current?.abort() } }, [])
+  useEffect(() => { alive.current = true; return () => { alive.current = false; request.current?.abort(); marineRequest.current?.abort() } }, [])
   useEffect(() => {
     if (!selected) return
     let disposed = false
     accessProvider.getAccessStatus(selected).then(status => { if (!disposed) setAccessStatus(status) })
     return () => { disposed = true }
   }, [selected, accessProvider])
-  const start = () => { request.current?.abort(); const controller = new AbortController(); request.current = controller; setBusy(true); return controller }
+  const start = () => { request.current?.abort(); marineRequest.current?.abort(); setMarineBusy(false); const controller = new AbortController(); request.current = controller; setBusy(true); return controller }
+  // Only ever called with an explicitly selected official point — never a preview, arbitrary map
+  // click or GPS fix — and only that point's already-public coordinates are sent (the provider
+  // rounds them again to 3dp). Raw GPS never reaches the marine proxy.
+  const loadMarine = (point: OfficialFishingPointRef) => {
+    marineRequest.current?.abort(); const controller = new AbortController(); marineRequest.current = controller
+    setMarineResult(undefined); setMarineBusy(true)
+    marineProvider.getCurrentObservations({ latitude: point.latitude, longitude: point.longitude }, controller.signal)
+      .then(value => { if (!controller.signal.aborted) setMarineResult(value) })
+      // A non-abort exception is a failure state, never a silently missing panel.
+      .catch(() => { if (!controller.signal.aborted) setMarineResult({ status: 'UNAVAILABLE', observations: [], reason: '조류 예측 데이터를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.' }) })
+      .finally(() => { if (!controller.signal.aborted) setMarineBusy(false) })
+  }
   // Catalog note is prefixed to the outcome message, not a substitute for it — a partial/stale
   // catalog must never read as a complete, fresh result (v1.5 REQ-NFR-LIVE-RESILIENCE-005).
   const catalogNote = (status: CatalogResult['status']) => status === 'PARTIAL' ? '공식 포인트 일부만 불러왔습니다. ' : status === 'STALE_FALLBACK' ? '최근 저장된 공식 포인트 정보를 표시합니다. ' : ''
   const search = async () => {
-    const controller = start(); setPreview(undefined); setSelected(undefined); setResult(undefined); setAccessStatus(undefined); setArbitrary(undefined); setNearestCandidates([])
+    const controller = start(); setPreview(undefined); setSelected(undefined); setResult(undefined); setMarineResult(undefined); setAccessStatus(undefined); setArbitrary(undefined); setNearestCandidates([])
     try {
       const catalog = await provider.getCatalog(type, controller.signal)
       if (controller.signal.aborted) return
@@ -51,16 +76,24 @@ export function LiveApp() {
     } catch { if (!controller.signal.aborted) { setPoints([]); setMessage('공식 후보 목록을 불러오지 못했습니다. 연결 설정을 확인한 뒤 다시 검색해 주세요.') } }
     finally { if (!controller.signal.aborted) setBusy(false) }
   }
-  const select = async (point: OfficialFishingPointRef) => {
-    const controller = start(); setSelected(point); setResult(undefined)
-    try { const value = await provider.getOfficialIndex(point, controller.signal); if (!controller.signal.aborted) setResult(value) }
-    catch { /* Ignore cancellation of an older selection. */ }
-    finally { if (!controller.signal.aborted) setBusy(false) }
+  const select = (point: OfficialFishingPointRef) => {
+    const controller = start(); setSelected(point); setResult(undefined); setMarineResult(undefined)
+    // Official-index and marine-current are independent backends (a Cloudflare Worker and a separate
+    // alternate proxy — v1.6.2) fetched concurrently, not sequentially: a slow/retrying official
+    // index (e.g. a live upstream outage) must never delay the marine panel, and a marine failure
+    // must never affect the official-index result. Fetched only after an explicit point selection —
+    // never on preview/arbitrary-click — and only the selected official point's own (already-public,
+    // non-exact) coordinates are sent, rounded again to 3dp by the provider itself (v1.6.3).
+    void provider.getOfficialIndex(point, controller.signal)
+      .then(value => { if (!controller.signal.aborted) setResult(value) })
+      .catch(() => { /* Ignore cancellation of an older selection. */ })
+      .finally(() => { if (!controller.signal.aborted) setBusy(false) })
+    loadMarine(point)
   }
   // A marker/list click only previews an official point; it never fetches official data by itself.
   const previewOfficial = (point: OfficialFishingPointRef) => { setArbitrary(undefined); setNearestCandidates([]); setPreview(point) }
   const onMapBackgroundClick = async (coords: TransientCoordinates) => {
-    const controller = start(); setArbitrary(coords); setPreview(undefined); setSelected(undefined); setResult(undefined); setAccessStatus(undefined); setNearestCandidates([])
+    const controller = start(); setArbitrary(coords); setPreview(undefined); setSelected(undefined); setResult(undefined); setMarineResult(undefined); setAccessStatus(undefined); setNearestCandidates([])
     setMessage('선택 위치 주변 공식 기준 포인트를 찾는 중입니다.')
     try {
       const catalog = await provider.getCatalog(type, controller.signal)
@@ -90,6 +123,6 @@ export function LiveApp() {
     {arbitrary && !preview && <section className="point-preview arbitrary-preview"><div><h2>선택 위치</h2><p>지도에서 선택한 위치 · 공식 바다낚시지수 기준 포인트가 아닙니다.</p></div></section>}
     {arbitrary && nearestCandidates.length > 0 && <section className="nearest-candidates" aria-label="선택 위치 주변 공식 기준 포인트"><h3>가장 가까운 공식 기준 포인트</h3><ul>{nearestCandidates.map(candidate => <li key={candidate.point.officialPointId}><div><strong>{candidate.point.placeName}</strong><span>{candidate.distanceKm.toFixed(1)} km · {candidate.point.fishingType}</span></div><button className="secondary-button" disabled={busy} onClick={() => setPreview(candidate.point)}>이 기준 포인트로 확인</button></li>)}</ul></section>}
     {preview && <section className="point-preview"><div><h2>{preview.placeName}</h2><p>공식 바다낚시지수 기준 포인트 · {preview.fishingType}</p><p>{location ? `현재 위치와 ${distanceKm(location, preview).toFixed(1)} km · 거리 기반 후보 · ${selected?.officialPointId === preview.officialPointId ? '사용자 확인됨' : '아직 선택하지 않음'}` : arbitrary ? `선택 위치와 ${distanceKm(arbitrary, preview).toFixed(1)} km` : '공식 바다낚시지수 기준 포인트입니다.'}</p></div><button className="primary-button" disabled={busy} onClick={() => void select(preview)}>이 포인트 선택</button></section>}
-    <section className="brief-panel live-brief" aria-label="선택한 포인트 판단 브리프">{selected ? <><h2>{selected.placeName}</h2><p>공식 기준 포인트 · {selected.fishingType}</p>{accessStatus && <AccessStatusPanel status={accessStatus} />}{result && <OfficialIndexPanel result={result} />}<button className="secondary-button" disabled={busy} onClick={() => void select(selected)}>공식 데이터 다시 조회</button></> : <><p className="section-kicker">DECISION BRIEF</p><h2>포인트를 선택하면 판단 정보가 표시됩니다.</h2><p>낚시 이용 상태 · 현재 환경 예보 · 어종별 공식 지수 · 기준시각과 근거</p></>}</section>
+    <section className="brief-panel live-brief" aria-label="선택한 포인트 판단 브리프">{selected ? <><h2>{selected.placeName}</h2><p>공식 기준 포인트 · {selected.fishingType}</p>{accessStatus && <AccessStatusPanel status={accessStatus} />}{result && <OfficialIndexPanel result={result} />}<MarineCurrentPanel result={marineResult} busy={marineBusy} onRetry={() => loadMarine(selected)} /><button className="secondary-button" disabled={busy} onClick={() => void select(selected)}>공식 데이터 다시 조회</button></> : <><p className="section-kicker">DECISION BRIEF</p><h2>포인트를 선택하면 판단 정보가 표시됩니다.</h2><p>낚시 이용 상태 · 현재 환경 예보 · 어종별 공식 지수 · 기준시각과 근거</p></>}</section>
   </main></div>
 }

@@ -70,7 +70,10 @@ export interface SpeciesGuidanceProvider {
 // (cm/s) and a numeric bearing (deg) are both provided, but the bearing's convention ("flowing
 // toward" vs "flowing from", true vs magnetic north) is not stated anywhere in the official contract.
 // directionConvention therefore stays 'UNKNOWN' unconditionally; no code path may assume one.
-export type CurrentType = 'INSTANTANEOUS' | 'PEAK_FLOOD' | 'PEAK_EBB' // 전류 / 최강창조류 / 최강낙조류
+// v1.6.3: '전류' is 전류(轉流) — the turn of the tidal current — not an "instantaneous current" as v1.6
+// read it. Live rows (2026-09-24, 가거도 public point) show '전류' at ~2 cm/s midway between a
+// '최강낙조류' (70 cm/s) and a '최강창조류' (67 cm/s). The UI shows KHOA's own label verbatim.
+export type CurrentType = 'SLACK' | 'PEAK_FLOOD' | 'PEAK_EBB' // 전류 / 최강창조류 / 최강낙조류
 export type ObservationType = 'OBSERVED' | 'FORECAST' | 'MODELLED'
 export type MarineDataStatus = 'SUCCESS' | 'PARTIAL' | 'STALE' | 'UNAVAILABLE' | 'UNSUPPORTED_AREA' | 'NOT_CONNECTED'
 
@@ -79,7 +82,11 @@ export interface MarineCurrentObservation {
   sourceName: string
   latitude: number
   longitude: number
-  currentType: CurrentType
+  // v1.6.3: KHOA's real response ships `type: ""` on most rows — only the few event rows (전류,
+  // 최강창조류, 최강낙조류) are labeled; the 10-minute rows between them are unlabeled (live, 2026-09-24).
+  // Undocumented by the official contract. Absent (undefined) means "KHOA did not label this row,"
+  // never a guess. speed/direction/forecastAt remain valid and are never discarded for this reason.
+  currentType?: CurrentType
   speed?: number
   speedUnit?: 'cm/s'
   direction?: number
@@ -91,6 +98,13 @@ export interface MarineCurrentObservation {
   // instead of a fabricated "N km away" figure.
   spatialReference: string
   forecastAt: string
+  // v1.6.3: whether SDate/SHour/SMinute (the request) and obs_date (the response) are KST or UTC is
+  // not stated by KHOA's API page or the data.go.kr listing (re-checked 2026-09-24), and a live 200
+  // response proves nothing either way — a forecast service answers whatever window is asked.
+  // 'UNCONFIRMED' until an authoritative source settles it. No code path assumes KST or UTC: the
+  // provider requests a window containing the real present under both readings (requestWindow) and
+  // the UI never marks any row as "now"/"현재".
+  timeBasis: 'UNCONFIRMED'
   sourceTimestamp: string
   trustStatus: TrustStatus
 }
