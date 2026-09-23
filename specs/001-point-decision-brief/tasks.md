@@ -330,4 +330,4 @@ the last-seen httpClass through the existing onRetry callback instead of divergi
 - [X] T101 LiveApp: independent marine AbortController, cancel on navigation/unmount, explicit-selection-only trigger, official coordinate only; `VITE_MARINE_API_BASE_URL` in deploy-pages.yml; REQ-FUNC-MARINE-UI-001,004, REQ-NFR-MARINE-004; Depends on: T099; Blocks: T102.
 - [X] T102 Tests: provider window/NOT_CONNECTED/abort/numeric, panel states, E2E (no call before selection, no GPS, failure isolation, marine-only retry, race, cancel, keyboard, overflow, screenshots); Depends on: T100/T101; Blocks: T103.
 - [X] T103 Full verification gate + Desktop/Mobile visual review + v1.6.3 analyze; Depends on: T102; Blocks: T104.
-- [ ] T104 Commit/push main; verify Pages deploy and a live marine lookup in the deployed page; Depends on: T103.
+- [X] T104 Commit/push main; verify Pages deploy and a live marine lookup in the deployed page; Depends on: T103.
