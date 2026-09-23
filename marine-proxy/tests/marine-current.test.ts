@@ -115,3 +115,31 @@ describe('marine-proxy security boundary', () => {
     } finally { vi.unstubAllGlobals() }
   })
 })
+
+describe('unsupported area (v1.6.3)', () => {
+  it('maps KHOA "No search data" for a valid window to 422 NO_DATA_FOR_LOCATION', async () => {
+    const d = deps(); d.fetch.mockResolvedValue(new Response(JSON.stringify({ result: { error: 'No search data' } }), { headers: { 'Content-Type': 'text/html;charset=UTF-8' } }))
+    const response = await handleRequest(make(), env, d)
+    expect(response.status).toBe(422)
+    expect(await response.json()).toEqual({ error: 'NO_DATA_FOR_LOCATION' })
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://dagara0718.github.io')
+  })
+  it('rejects an end-before-start window with 400 before calling KHOA (KHOA would also say "No search data")', async () => {
+    const d = deps()
+    const response = await handleRequest(make('SDate=20260917&SHour=13&SMinute=00&EDate=20260917&EHour=12&EMinute=00&lat=36&lon=126.5&ResultType=json'), env, d)
+    expect(response.status).toBe(400)
+    expect(d.fetch).not.toHaveBeenCalled()
+  })
+  it('accepts a window that crosses midnight', async () => {
+    const d = deps()
+    expect((await handleRequest(make('SDate=20260923&SHour=16&SMinute=50&EDate=20260924&EHour=02&EMinute=50&lat=36&lon=126.5&ResultType=json'), env, d)).status).toBe(200)
+  })
+  it.each([
+    { result: { error: 'SERVICE KEY IS NOT REGISTERED' } },
+    { result: { error: 'No search data', data: [] } },
+    { error: 'No search data' },
+  ])('keeps any other error shape a 502 failure, not unsupported area: %j', async body => {
+    const d = deps(); d.fetch.mockResolvedValue(Response.json(body))
+    expect((await handleRequest(make(), env, d)).status).toBe(502)
+  })
+})

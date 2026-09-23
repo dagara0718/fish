@@ -101,7 +101,10 @@ export class KhoaTidalCurrentProvider implements MarineCurrentProvider {
       signal, this.sleep,
       (_attempt, httpClass) => { lastHttpClass = httpClass },
     )
-    if (!response) return lastHttpClass === '503' ? { status: 'NOT_CONNECTED', observations: [] } : { status: 'UNAVAILABLE', observations: [], reason: '조류 예측 데이터를 확인하지 못했습니다. 제공 범위 밖이거나 일시적인 오류일 수 있습니다.' }
+    // 422 = the proxy saw KHOA's own "No search data" for a valid window: no prediction point near this
+    // location (marine-proxy/shared/marine-response.ts isNoSearchData). Fatal, so never retried.
+    if (!response && lastHttpClass === '422') return { status: 'UNSUPPORTED_AREA', observations: [], reason: '제공기관이 이 위치(가장 가까운 예측 지점 최대 1km)의 조류 예측을 제공하지 않습니다.' }
+    if (!response) return lastHttpClass === '503' ? { status: 'NOT_CONNECTED', observations: [] } : { status: 'UNAVAILABLE', observations: [], reason: '조류 예측 데이터를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.' }
     let body: unknown
     try { body = await response.json() } catch { return { status: 'UNAVAILABLE', observations: [], reason: '공식 응답 형식을 확인할 수 없습니다.' } }
     const result = normalizeTidalCurrent(body, new Date().toISOString())

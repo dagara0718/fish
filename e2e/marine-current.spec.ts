@@ -124,3 +124,14 @@ test('a new search cancels a pending marine request without leaving a loading st
   await expect(page.locator('.marine-section [role="status"]')).toBeVisible()
   await expect(page.locator('.marine-section').getByText('5–5 cm/s')).toBeVisible()
 })
+
+test('proxy 422 NO_DATA_FOR_LOCATION is shown as an unsupported area, not a failure, without retry', async ({ page }) => {
+  const { marineCalls } = await setup(page, route => route.fulfill({ status: 422, json: { error: 'NO_DATA_FOR_LOCATION' } }))
+  await page.goto('./'); await page.getByRole('button', { name: '검색', exact: true }).click()
+  await searchAndSelect(page, '계약 시연 기준점')
+  await expect(page.getByText('이 위치는 조류 예측 제공 범위가 아닙니다')).toBeVisible()
+  await expect(page.getByText('조류 예측 데이터를 확인하지 못했습니다', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '조류 데이터만 다시 조회' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: '어종별 공식 바다낚시지수' })).toBeVisible()
+  expect(marineCalls).toHaveLength(1)
+})

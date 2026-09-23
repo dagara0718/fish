@@ -75,6 +75,12 @@ describe('KhoaTidalCurrentProvider', () => {
     const provider = new KhoaTidalCurrentProvider('https://proxy.example', fetcher, noSleep)
     expect((await provider.getCurrentObservations(query)).status).toBe('NOT_CONNECTED')
   })
+  it('returns UNSUPPORTED_AREA without retrying on the proxy 422 NO_DATA_FOR_LOCATION', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ error: 'NO_DATA_FOR_LOCATION' }, { status: 422 }))
+    const result = await new KhoaTidalCurrentProvider('https://proxy.example', fetcher, noSleep).getCurrentObservations(query)
+    expect(result.status).toBe('UNSUPPORTED_AREA')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
   it('returns UNAVAILABLE, not a throw, when retries exhaust', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 500 }))
     const provider = new KhoaTidalCurrentProvider('https://proxy.example', fetcher, noSleep)

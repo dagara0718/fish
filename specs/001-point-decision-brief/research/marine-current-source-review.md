@@ -119,3 +119,9 @@ unless KHOA changes it.
 - **`type` mostly empty**: 58/61 rows in a 10 h window had `type: ""`; only event rows are labeled.
 - **Numeric fields**: via the proxy, `current_speed`/`current_dir` arrive as numbers.
 - **Out-of-coverage**: an inland coordinate yields proxy `502 MALFORMED_RESPONSE` (not an empty list).
+- **"No search data" (follow-up probe, 2026-09-24)**: KHOA returns HTTP 200
+  `{"result":{"error":"No search data"}}` for inland 37.566/126.978 and open ocean 32.000/130.500, and
+  also for an end-before-start window; sea point 34.073/125.088 returns data for 2000, 2026 and 2099
+  windows. Coverage is spatial, not temporal.
+- **ServiceKey not enforced** at probe time: no-key and invalid-key requests returned identical data.
+  Recorded, not relied on.

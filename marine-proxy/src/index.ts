@@ -3,7 +3,7 @@
 // ERR_MODULE_NOT_FOUND even though it resolves fine under `moduleResolution: bundler` at typecheck
 // time (v1.6.2 VERCEL_ESM_MODULE_RESOLUTION). TypeScript with `bundler` resolution accepts a `.js`
 // specifier pointing at a `.ts` source file, so this is typecheck-safe.
-import { MARINE_PARAMS, validCoordinate, validDate, validHour, validMinute, validateMarineResponse } from '../shared/marine-response.js'
+import { MARINE_PARAMS, isNoSearchData, validCoordinate, validDate, validHour, validMinute, validRange, validateMarineResponse } from '../shared/marine-response.js'
 
 // v1.6.2 PoC: an alternate server-side path for /api/marine-current, deployed outside Cloudflare
 // Workers' global edge (see specs/001-point-decision-brief/v1.6.2-result.md for why). Deliberately
@@ -21,6 +21,9 @@ async function handleMarineCurrent(url: URL, env: Env, reply: (status: number, b
   const sdate = url.searchParams.get('SDate'); const edate = url.searchParams.get('EDate')
   const resultType = url.searchParams.get('ResultType') ?? 'json'
   if (!validDate(sdate ?? '') || !validDate(edate ?? '') || !validHour(url.searchParams.get('SHour')) || !validMinute(url.searchParams.get('SMinute')) || !validHour(url.searchParams.get('EHour')) || !validMinute(url.searchParams.get('EMinute')) || !validCoordinate(url.searchParams.get('lat'), 90) || !validCoordinate(url.searchParams.get('lon'), 180) || resultType !== 'json') return reply(400, { error: 'INVALID_PARAMETERS' })
+  // An end-before-start window makes KHOA answer 'No search data' too, which would then be misread as
+  // "no data at this location" below — so it is rejected here, before any upstream call.
+  if (!validRange(sdate!, url.searchParams.get('SHour')!, url.searchParams.get('SMinute')!, edate!, url.searchParams.get('EHour')!, url.searchParams.get('EMinute')!)) return reply(400, { error: 'INVALID_PARAMETERS' })
   const secret = env.KHOA_MARINE_SERVICE_KEY?.trim()
   if (!secret) return reply(503, { error: 'NOT_CONFIGURED' })
   // Round to 3dp server-side too — never the literal exact-GPS value in the upstream request or any
@@ -51,6 +54,9 @@ async function handleMarineCurrent(url: URL, env: Env, reply: (status: number, b
     }
     const body = await response.text()
     if (body.length > 2_000_000) return reply(502, { error: 'MALFORMED_RESPONSE' })
+    // Valid window (checked above) + KHOA's exact 'No search data' = no prediction point at this
+    // location. A distinct 422 so the client can show "unsupported area" instead of a generic failure.
+    if (isNoSearchData(body)) return reply(422, { error: 'NO_DATA_FOR_LOCATION' })
     let parsed: unknown
     try { parsed = validateMarineResponse(body) } catch { return reply(502, { error: 'MALFORMED_RESPONSE' }) }
     const serialized = JSON.stringify(parsed)

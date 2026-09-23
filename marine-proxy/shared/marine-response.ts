@@ -66,3 +66,21 @@ export function validDate(date: string): boolean {
   if (!/^\d{8}$/.test(date)) return false
   return isRealCalendarDate(`${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`)
 }
+
+// v1.6.3: KHOA answers `{"result":{"error":"No search data"}}` (HTTP 200) when it has no prediction
+// point for the request — observed 2026-09-24 for an inland coordinate (37.566/126.978) and for an
+// open-ocean coordinate outside its model (32.000/130.500), while past (2000) and future (2099)
+// windows at a sea point both return data. The same text also comes back for an end-before-start
+// window, so callers must reject that with validRange() first; only then does this signal mean
+// "no prediction at this location". Exact match only — any other error text stays a failure.
+export function isNoSearchData(body: string): boolean {
+  try {
+    const raw = JSON.parse(body) as { result?: Record<string, unknown> }
+    const result = raw?.result
+    return !!result && typeof result === 'object' && result.error === 'No search data' && !('data' in result)
+  } catch { return false }
+}
+// YYYYMMDD+HH+mm strings compare lexically in time order; end must not precede start.
+export function validRange(sdate: string, shour: string, sminute: string, edate: string, ehour: string, eminute: string): boolean {
+  return `${sdate}${shour}${sminute}` <= `${edate}${ehour}${eminute}`
+}
