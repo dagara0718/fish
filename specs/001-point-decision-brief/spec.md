@@ -437,3 +437,11 @@ click the user may request a side-by-side comparison of the nearest (at most 3) 
 grades at one shared forecast slot. It is explicitly not a value for the clicked location and not a
 probability; nothing is interpolated, scored or ranked. The Worker marine route now mirrors the proxy's
 422 unsupported-area contract.
+
+# v1.6.5 governing delta
+
+See [v1.6.5-product-delta.md](v1.6.5-product-delta.md) (REQ-FUNC-SPOT-001~005). A map click or GPS fix now
+shows a spot brief automatically: environment-based expected species from the nearest official
+point's forecast, nearby official grades (<= 3 points within 15 km), tidal current, and a day selector.
+Supersedes REQ-FUNC-NEARBY-001's explicit button (user decision). No point is auto-selected; the GPS
+fix is never sent.

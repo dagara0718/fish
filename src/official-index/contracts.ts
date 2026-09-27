@@ -53,7 +53,10 @@ export interface MarineEnvironmentSnapshot {
 export type OfficialIndexResult =
   // guidance is a separate, independently-sourced assessment (never computed from officialGrade/
   // officialScore in this same result) — optional so Demo fixtures need not populate it.
-  | { kind: 'SUCCESS' | 'PARTIAL' | 'STALE_CACHE'; point: OfficialFishingPointRef; species: OfficialSpeciesIndex[]; environment: MarineEnvironmentSnapshot; demo: boolean; guidance?: EnvironmentBasedSpeciesGuidance[] }
+  | { kind: 'SUCCESS' | 'PARTIAL' | 'STALE_CACHE'; point: OfficialFishingPointRef; species: OfficialSpeciesIndex[]; environment: MarineEnvironmentSnapshot; demo: boolean; guidance?: EnvironmentBasedSpeciesGuidance[]
+    // v1.6.5: the same environment guidance computed separately for each forecast slot
+    // ("YYYY-MM-DD · 오전", matching OfficialSpeciesIndex.evaluatedAt), so a chosen day can be shown.
+    guidanceBySlot?: Record<string, EnvironmentBasedSpeciesGuidance[]> }
   | { kind: 'COLLECTION_FAILED'; point: OfficialFishingPointRef; reason: string; demo: boolean }
   | { kind: 'UNSUPPORTED_POINT'; reason: string; demo: boolean }
 

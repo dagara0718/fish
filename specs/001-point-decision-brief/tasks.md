@@ -339,3 +339,10 @@ the last-seen httpClass through the existing onRetry callback instead of divergi
 - [X] T107 summarizeNearby in src/official-index/nearby-comparison.ts + tests/unit/nearby-comparison.test.ts; REQ-FUNC-NEARBY-002~003.
 - [X] T108 NearbyComparisonPanel.tsx, LiveApp compareNearby (explicit, ≤3 lookups, cancelled by navigation), global.css; e2e/nearby-comparison.spec.ts; REQ-FUNC-NEARBY-001~004.
 - [X] T109 Full verification gate + commit/push main + Worker deploy + Pages verification; Depends on: T106-T108.
+
+# v1.6.5 Tasks — spot brief (see v1.6.5-product-delta.md)
+
+- [X] T110 guidanceBySlot in normalizeOfficial; summarizeNearby slot selection; REQ-FUNC-SPOT-002,005.
+- [X] T111 SpotBrief + LiveApp showSpot/loadSpot (map click, GPS; GPS fix never sent); REQ-FUNC-SPOT-001~004.
+- [X] T112 e2e/spot-brief.spec.ts; live-map/marine specs updated for the user-approved requirement change.
+- [ ] T113 Full gate + commit/push + Pages production check.

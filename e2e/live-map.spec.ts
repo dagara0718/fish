@@ -55,7 +55,7 @@ test('Live proxy failure never displays demo fallback', async ({ page }) => {
   await expect(page.getByText('DEMO DATA')).toHaveCount(0)
 })
 
-test('arbitrary map click surfaces nearest official candidates without auto-selecting or calling the index API', async ({ page, isMobile }) => {
+test('arbitrary map click shows a spot brief from nearby official points, never auto-selecting one (v1.6.5 REQ-FUNC-SPOT-001)', async ({ page, isMobile }) => {
   const indexCalls: string[] = []
   await page.route('https://proxy.example/**', route => { indexCalls.push(route.request().url()); route.fallback() })
   await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1440, height: 900 })
@@ -68,21 +68,23 @@ test('arbitrary map click surfaces nearest official candidates without auto-sele
   await page.locator('[data-mock-map]').click({ position: { x: 250, y: 300 } })
   await expect(page.getByRole('heading', { name: '선택 위치' })).toBeVisible()
   await expect(page.getByText('공식 바다낚시지수 기준 포인트가 아닙니다.')).toBeVisible()
-  await expect(page.getByRole('heading', { name: '가장 가까운 공식 기준 포인트' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '이 위치 어종 브리프' })).toBeVisible()
   await expect(page.getByRole('button', { name: '× 선택 위치' })).toBeVisible()
+  await page.getByText(/주변 공식 포인트 직접 보기/).click()
   await expect(page.getByRole('button', { name: '이 기준 포인트로 확인' })).toBeVisible()
-  await expect(page.getByText(/\d+\.\d km · /)).toBeVisible() // candidate distance (the 15 km comparison label also contains 'km')
+  await expect(page.locator('.spot-points').getByText(/\d+\.\d km/)).toBeVisible() // candidate distance
   await page.screenshot({ path: `test-results/screenshots/v1.3-${isMobile ? 'mobile' : 'desktop'}-arbitrary-click.png`, fullPage: true })
-  // The catalog listing (search) has no placeName; only a confirmed per-point selection adds one.
+  // The catalog listing (search) has no placeName; the spot brief looks up at most 3 nearby points.
   const perPointCalls = () => indexCalls.filter(url => url.includes('placeName=')).length
-  expect(perPointCalls()).toBe(0)
+  expect(perPointCalls()).toBeGreaterThan(0)
+  expect(perPointCalls()).toBeLessThanOrEqual(3)
+  // Still no automatic selection: the selected-point official index panel is absent until the user picks.
   await expect(page.getByRole('heading', { name: '어종별 공식 바다낚시지수' })).toHaveCount(0)
   await page.getByRole('button', { name: '이 기준 포인트로 확인' }).click()
   await expect(page.getByRole('button', { name: '이 포인트 선택' })).toBeVisible()
-  expect(perPointCalls()).toBe(0)
+  await expect(page.getByRole('heading', { name: '어종별 공식 바다낚시지수' })).toHaveCount(0)
   await page.getByRole('button', { name: '이 포인트 선택' }).click()
   await expect(page.getByRole('heading', { name: '어종별 공식 바다낚시지수' })).toBeVisible()
-  expect(perPointCalls()).toBeGreaterThan(0)
 })
 
 test('user-driven viewport is preserved across preview, selection, and arbitrary map clicks', async ({ page, isMobile }) => {

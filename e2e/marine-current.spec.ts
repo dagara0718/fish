@@ -43,17 +43,22 @@ test('fetches only after explicit selection, with the official point coordinate 
   await page.getByRole('button', { name: '검색', exact: true }).click()
   await expect(page.getByRole('button', { name: /계약 시연 기준점 공식 기준 포인트/ })).toBeVisible()
   await page.getByRole('button', { name: /현재 위치 사용/ }).click()
+  // v1.6.5: the GPS spot brief looks up the tidal current at the nearest official point's coordinate.
+  await expect(page.getByRole('heading', { name: '이 위치 어종 브리프' })).toBeVisible()
+  await expect.poll(() => marineCalls.length).toBe(1)
+  expect(marineCalls[0]!.searchParams.get('lat')).toBe('35.000')
   await page.getByRole('button', { name: /계약 시연 기준점 공식 기준 포인트/ }).click() // preview only
   await expect(page.getByRole('button', { name: '이 포인트 선택' })).toBeVisible()
-  expect(marineCalls).toHaveLength(0)
+  expect(marineCalls).toHaveLength(1) // a preview adds no call
   await page.getByRole('button', { name: '이 포인트 선택' }).click()
   const panel = page.locator('.marine-section')
   await expect(panel.getByRole('heading', { name: '조류 예측 데이터' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '어종별 공식 바다낚시지수' })).toBeVisible()
-  expect(marineCalls).toHaveLength(1)
-  expect(marineCalls[0]!.searchParams.get('lat')).toBe('35.000')
-  expect(marineCalls[0]!.searchParams.get('lon')).toBe('129.000')
-  expect(marineCalls[0]!.href).not.toMatch(/35\.01|129\.01/)
+  expect(marineCalls).toHaveLength(2)
+  for (const call of marineCalls) {
+    expect(call.searchParams.get('lat')).toBe('35.000'); expect(call.searchParams.get('lon')).toBe('129.000')
+    expect(call.href).not.toMatch(/35\.01|129\.01/) // never the GPS fix
+  }
   await expect(panel.getByText('42–42 cm/s')).toBeVisible()
   await expect(panel.getByText('예측 구간 (시간대 미확인)')).toBeVisible()
   await expect(panel.locator('.trust-badge[data-status="UNVERIFIED"]').first()).toBeVisible()

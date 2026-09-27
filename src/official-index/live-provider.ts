@@ -2,6 +2,7 @@ import { parseEnvelope, type OfficialItem } from '../../shared/fishing-api'
 import type { CatalogResult, EnvironmentalObservation, FishingType, OfficialFishingIndexProvider, OfficialFishingPointRef, OfficialIndexResult } from './contracts'
 import type { TrustStatus } from '../domain/contracts'
 import { computeEnvironmentGuidance } from '../species-guidance/environment-guidance-provider'
+import type { EnvironmentBasedSpeciesGuidance } from '../species-guidance/contracts'
 
 export function seoulDate(now = new Date()) { return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(now).replaceAll('-', '') }
 const source = '국립해양조사원 · 바다낚시지수'
@@ -32,7 +33,9 @@ export function normalizeOfficial(items: OfficialItem[], point: OfficialFishingP
   const partial = records.some(item => !item.seafsTgfshNm || !item.totalIndex || !item.predcYmd || !item.predcNoonSeCd)
   // Guidance reads only raw environment fields on `records` — never `species`/officialGrade/officialScore.
   const guidance = computeEnvironmentGuidance(records, point, today)
-  return { kind: records.every(item => trust(item) === 'STALE') ? 'STALE_CACHE' : partial ? 'PARTIAL' : 'SUCCESS', point, species, environment: { locationReference: point, evaluatedAt: time(records[0]!), observations: observations.filter((item, index, all) => all.findIndex(other => JSON.stringify(other) === JSON.stringify(item)) === index) }, demo: false, guidance }
+  const guidanceBySlot: Record<string, EnvironmentBasedSpeciesGuidance[]> = {}
+  for (const slot of new Set(records.map(time))) guidanceBySlot[slot] = computeEnvironmentGuidance(records.filter(item => time(item) === slot), point, today)
+  return { kind: records.every(item => trust(item) === 'STALE') ? 'STALE_CACHE' : partial ? 'PARTIAL' : 'SUCCESS', point, species, environment: { locationReference: point, evaluatedAt: time(records[0]!), observations: observations.filter((item, index, all) => all.findIndex(other => JSON.stringify(other) === JSON.stringify(item)) === index) }, demo: false, guidance, guidanceBySlot }
 }
 
 // --- Retry/backoff (v1.5): a transient KHOA failure on one page must not discard the rest of an

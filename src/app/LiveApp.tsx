@@ -8,8 +8,8 @@ import { PointMap } from '../features/point-discovery/PointMap'
 import { OfficialIndexPanel } from '../features/official-index/OfficialIndexPanel'
 import { AccessStatusPanel } from '../features/official-index/AccessStatusPanel'
 import { MarineCurrentPanel } from '../features/official-index/MarineCurrentPanel'
-import { NearbyComparisonPanel } from '../features/official-index/NearbyComparisonPanel'
-import { summarizeNearby, type NearbyComparison } from '../official-index/nearby-comparison'
+import { SpotBrief } from '../features/official-index/SpotBrief'
+import type { NearbyEntry } from '../official-index/nearby-comparison'
 import { SearchForm } from '../features/point-discovery/SearchForm'
 import { KhoaTidalCurrentProvider } from '../species-guidance/khoa-tidal-current-provider'
 import type { MarineCurrentResult } from '../species-guidance/contracts'
@@ -41,7 +41,11 @@ export function LiveApp() {
   const [result, setResult] = useState<OfficialIndexResult>()
   const [marineResult, setMarineResult] = useState<MarineCurrentResult>()
   const [marineBusy, setMarineBusy] = useState(false)
-  const [nearby, setNearby] = useState<NearbyComparison | 'LOADING'>()
+  // v1.6.5 spot brief: the user's own spot (map click or GPS fix), shown without picking a point.
+  const [spot, setSpot] = useState<{ coords: TransientCoordinates; source: 'MAP' | 'GPS' }>()
+  const [spotEntries, setSpotEntries] = useState<NearbyEntry[] | 'LOADING'>()
+  const [spotSlot, setSpotSlot] = useState<string>()
+  const [marineBasis, setMarineBasis] = useState<string>()
   const [accessStatus, setAccessStatus] = useState<FishingAccessStatus>()
   const [message, setMessage] = useState('포인트명으로 공식 기준 포인트를 검색해 주세요.')
   const [busy, setBusy] = useState(false)
@@ -58,11 +62,11 @@ export function LiveApp() {
     accessProvider.getAccessStatus(selected).then(status => { if (!disposed) setAccessStatus(status) })
     return () => { disposed = true }
   }, [selected, accessProvider])
-  const start = () => { request.current?.abort(); marineRequest.current?.abort(); setMarineBusy(false); setNearby(undefined); const controller = new AbortController(); request.current = controller; setBusy(true); return controller }
-  // Only ever called with an explicitly selected official point — never a preview, arbitrary map
-  // click or GPS fix — and only that point's already-public coordinates are sent (the provider
-  // rounds them again to 3dp). Raw GPS never reaches the marine proxy.
-  const loadMarine = (point: OfficialFishingPointRef) => {
+  const start = () => { request.current?.abort(); marineRequest.current?.abort(); setMarineBusy(false); setSpotEntries(undefined); const controller = new AbortController(); request.current = controller; setBusy(true); return controller }
+  // Called for an explicitly selected official point, or for a spot brief (v1.6.5): a map-clicked
+  // location, or — for a GPS fix — the nearest official point's public coordinate. Raw GPS never
+  // reaches the marine proxy (the provider also rounds to 3dp).
+  const loadMarine = (point: TransientCoordinates) => {
     marineRequest.current?.abort(); const controller = new AbortController(); marineRequest.current = controller
     setMarineResult(undefined); setMarineBusy(true)
     marineProvider.getCurrentObservations({ latitude: point.latitude, longitude: point.longitude }, controller.signal)
@@ -75,7 +79,7 @@ export function LiveApp() {
   // catalog must never read as a complete, fresh result (v1.5 REQ-NFR-LIVE-RESILIENCE-005).
   const catalogNote = (status: CatalogResult['status']) => status === 'PARTIAL' ? '공식 포인트 일부만 불러왔습니다. ' : status === 'STALE_FALLBACK' ? '최근 저장된 공식 포인트 정보를 표시합니다. ' : ''
   const search = async () => {
-    const controller = start(); setPreview(undefined); setSelected(undefined); setResult(undefined); setMarineResult(undefined); setAccessStatus(undefined); setArbitrary(undefined); setNearestCandidates([])
+    const controller = start(); setPreview(undefined); setSelected(undefined); setResult(undefined); setMarineResult(undefined); setAccessStatus(undefined); setArbitrary(undefined); setSpot(undefined); setNearestCandidates([])
     try {
       const catalog = await provider.getCatalog(type, controller.signal)
       if (controller.signal.aborted) return
@@ -99,42 +103,54 @@ export function LiveApp() {
       .finally(() => { if (!controller.signal.aborted) setBusy(false) })
     loadMarine(point)
   }
-  // v1.6.4 REQ-FUNC-NEARBY-001: only on an explicit button press after an arbitrary map click — the
-  // click itself still fetches no per-point data. Shares the main controller, so any navigation
-  // (start()) or unmount cancels it; one point's failure never hides the others.
-  const compareTargets = nearestCandidates.slice(0, NEARBY_COMPARE_LIMIT)
-  const compareNearby = () => {
-    const controller = start(); setNearby('LOADING')
-    const targets = compareTargets
+  // v1.6.5 REQ-FUNC-SPOT-001~004: after a map click or GPS fix, fetch the official index of up to 3
+  // official points within NEARBY_MAX_KM and the tidal current, automatically. Shares the main
+  // controller, so any navigation or unmount cancels it; one point's failure never hides the others.
+  const loadSpot = (coords: TransientCoordinates, source: 'MAP' | 'GPS', catalog: CatalogResult, controller: AbortController) => {
+    const nearest = rankLocationCandidates(coords, catalog.points, NEARBY_MAX_KM).slice(0, NEAREST_CANDIDATE_LIMIT)
+    setNearestCandidates(nearest); setSpotSlot(undefined)
+    const where = source === 'GPS' ? '현재 위치' : '선택 위치'
+    setMessage(catalogNote(catalog.status) + (nearest.length ? `${where} 어종 브리프를 아래에 표시합니다.` : `${where} ${NEARBY_MAX_KM} km 이내에는 공식 바다낚시지수 기준 포인트가 없습니다.`))
+    if (source === 'MAP') { setMarineBasis('지도에서 선택한 위치 · 제공기관 기준 가장 가까운 예측 지점(최대 1km)'); loadMarine(coords) }
+    else if (nearest[0]) { setMarineBasis(`${nearest[0].point.placeName}(${nearest[0].distanceKm.toFixed(1)} km) 좌표 · 현재 위치 좌표는 전송하지 않습니다`); loadMarine(nearest[0].point) }
+    else setMarineBasis(undefined)
+    const targets = nearest.slice(0, NEARBY_COMPARE_LIMIT)
+    if (!targets.length) { setBusy(false); return }
+    setSpotEntries('LOADING')
     void Promise.all(targets.map(candidate => provider.getOfficialIndex(candidate.point, controller.signal)
       .catch(() => ({ kind: 'COLLECTION_FAILED' as const, point: candidate.point, reason: '공식 데이터를 확인하지 못했습니다.', demo: false }))
       .then(result => ({ point: candidate.point, distanceKm: candidate.distanceKm, result }))))
-      .then(entries => { if (!controller.signal.aborted) setNearby(summarizeNearby(entries)) })
+      .then(entries => { if (!controller.signal.aborted) setSpotEntries(entries) })
       .finally(() => { if (!controller.signal.aborted) setBusy(false) })
   }
   // A marker/list click only previews an official point; it never fetches official data by itself.
   const previewOfficial = (point: OfficialFishingPointRef) => { setArbitrary(undefined); setNearestCandidates([]); setPreview(point) }
   const onMapBackgroundClick = async (coords: TransientCoordinates) => {
-    const controller = start(); setArbitrary(coords); setPreview(undefined); setSelected(undefined); setResult(undefined); setMarineResult(undefined); setAccessStatus(undefined); setNearestCandidates([])
-    setMessage('선택 위치 주변 공식 기준 포인트를 찾는 중입니다.')
+    setArbitrary(coords)
+    await showSpot(coords, 'MAP')
+  }
+  const showSpot = async (coords: TransientCoordinates, source: 'MAP' | 'GPS') => {
+    const controller = start(); setSpot({ coords, source }); setPreview(undefined); setSelected(undefined); setResult(undefined); setMarineResult(undefined); setAccessStatus(undefined); setNearestCandidates([])
+    setMessage(source === 'GPS' ? '현재 위치 주변 공식 예보를 찾는 중입니다.' : '선택 위치 주변 공식 예보를 찾는 중입니다.')
+    let handedOff = false
     try {
       const catalog = await provider.getCatalog(type, controller.signal)
       if (controller.signal.aborted) return
       if (catalog.status === 'COLLECTION_FAILED') { setMessage('공식 포인트를 현재 불러오지 못했습니다. 연결 설정을 확인한 뒤 다시 시도해 주세요.'); return }
-      const nearest = rankLocationCandidates(coords, catalog.points, NEARBY_MAX_KM).slice(0, NEAREST_CANDIDATE_LIMIT)
-      setNearestCandidates(nearest)
-      setMessage(catalogNote(catalog.status) + (nearest.length ? '선택 위치 주변 공식 기준 포인트입니다. 직접 확인해 주세요.' : `선택 위치 ${NEARBY_MAX_KM} km 이내에는 공식 바다낚시지수 기준 포인트가 없습니다.`))
+      handedOff = true
+      loadSpot(coords, source, catalog, controller)
     } catch { if (!controller.signal.aborted) setMessage('공식 후보 목록을 불러오지 못했습니다. 연결 설정을 확인한 뒤 다시 시도해 주세요.') }
-    finally { if (!controller.signal.aborted) setBusy(false) }
+    finally { if (!handedOff && !controller.signal.aborted) setBusy(false) }
   }
   const locate = () => {
     if (!navigator.geolocation) { setMessage('현재 위치를 사용할 수 없습니다. 검색을 이용해 주세요.'); return }
     navigator.geolocation.getCurrentPosition(position => {
       if (!alive.current) return
       const value = { latitude: position.coords.latitude, longitude: position.coords.longitude }
-      setLocation(value); setArbitrary(undefined); setNearestCandidates([])
-      const nearby = rankLocationCandidates(value, points)
-      setMessage(nearby.length ? '거리 기준 후보입니다. 공식 기준 포인트를 직접 선택해 주세요.' : '현재 위치 주변에 지원되는 공식 바다낚시지수 포인트를 찾지 못했습니다. 먼저 공식 후보를 검색해 주세요.')
+      // The GPS fix stays in this component's memory only; it is used for local distances, and the
+      // spot brief sends only official points' names/coordinates, never the fix itself.
+      setLocation(value); setArbitrary(undefined)
+      void showSpot(value, 'GPS')
     }, () => { if (alive.current) setMessage('위치 권한이 거부되었거나 위치를 사용할 수 없습니다. 검색은 계속 이용할 수 있습니다.') }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 })
   }
   return <div className="app-shell"><header className="product-header"><div className="brand"><span className="brand-symbol">◎</span>포인트 판단</div><span className="demo-badge">LIVE · 공식 데이터</span></header><main id="main">
@@ -142,9 +158,8 @@ export function LiveApp() {
     {!import.meta.env.VITE_FISHING_API_BASE_URL && <p className="inline-state" role="status">실시간 공식 데이터 연결이 설정되지 않았습니다. 예시를 보려면 Demo 모드를 선택하세요.</p>}
     <div className="mobile-view-switch"><button aria-pressed={view === 'list'} onClick={() => setView('list')}>목록</button><button aria-pressed={view === 'map'} onClick={() => setView('map')}>지도</button></div>
     <div className={`live-discovery view-${view}`}><aside className="discovery-panel"><h2>공식 후보 포인트</h2><p role="status">{busy ? '공식 데이터를 확인 중입니다.' : message}</p><ul className="live-candidates">{points.map(point => <li key={point.officialPointId}><button aria-pressed={preview?.officialPointId === point.officialPointId} onClick={() => previewOfficial(point)}><strong>{point.placeName}</strong><span>{point.regionContext} · {point.fishingType}</span><span>{location ? `${distanceKm(location, point).toFixed(1)} km · ` : ''}공식 지수 지원 →</span></button></li>)}</ul></aside><PointMap points={points} location={location} selectedId={selected?.officialPointId} previewId={preview?.officialPointId} arbitrary={arbitrary} onPreview={previewOfficial} onMapClick={coords => void onMapBackgroundClick(coords)} /></div>
-    {arbitrary && !preview && <section className="point-preview arbitrary-preview"><div><h2>선택 위치</h2><p>지도에서 선택한 위치 · 공식 바다낚시지수 기준 포인트가 아닙니다.</p>{!busy && nearestCandidates.length === 0 && <p>선택 위치 {NEARBY_MAX_KM} km 이내에는 공식 바다낚시지수 기준 포인트가 없습니다.</p>}</div></section>}
-    {arbitrary && nearestCandidates.length > 0 && <section className="nearest-candidates" aria-label="선택 위치 주변 공식 기준 포인트"><h3>가장 가까운 공식 기준 포인트 <small>(15 km 이내)</small></h3><ul>{nearestCandidates.map(candidate => <li key={candidate.point.officialPointId}><div><strong>{candidate.point.placeName}</strong><span>{candidate.distanceKm.toFixed(1)} km · {candidate.point.fishingType}</span></div><button className="secondary-button" disabled={busy} onClick={() => setPreview(candidate.point)}>이 기준 포인트로 확인</button></li>)}</ul><button className="secondary-button" type="button" disabled={busy} onClick={compareNearby}>주변 {compareTargets.length}곳 공식 지수 비교 ({NEARBY_MAX_KM} km 이내)</button>{nearby === 'LOADING' && <p role="status">주변 공식 기준 포인트 지수를 확인하는 중입니다.</p>}{nearby && nearby !== 'LOADING' && <NearbyComparisonPanel comparison={nearby} />}</section>}
+    {arbitrary && !preview && <section className="point-preview arbitrary-preview"><div><h2>선택 위치</h2><p>지도에서 선택한 위치 · 공식 바다낚시지수 기준 포인트가 아닙니다.</p></div></section>}
     {preview && <section className="point-preview"><div><h2>{preview.placeName}</h2><p>공식 바다낚시지수 기준 포인트 · {preview.fishingType}</p><p>{location ? `현재 위치와 ${distanceKm(location, preview).toFixed(1)} km · 거리 기반 후보 · ${selected?.officialPointId === preview.officialPointId ? '사용자 확인됨' : '아직 선택하지 않음'}` : arbitrary ? `선택 위치와 ${distanceKm(arbitrary, preview).toFixed(1)} km` : '공식 바다낚시지수 기준 포인트입니다.'}</p></div><button className="primary-button" disabled={busy} onClick={() => void select(preview)}>이 포인트 선택</button></section>}
-    <section className="brief-panel live-brief" aria-label="선택한 포인트 판단 브리프">{selected ? <><h2>{selected.placeName}</h2><p>공식 기준 포인트 · {selected.fishingType}</p>{accessStatus && <AccessStatusPanel status={accessStatus} />}{result && <OfficialIndexPanel result={result} />}<MarineCurrentPanel result={marineResult} busy={marineBusy} onRetry={() => loadMarine(selected)} /><button className="secondary-button" disabled={busy} onClick={() => void select(selected)}>공식 데이터 다시 조회</button></> : <><p className="section-kicker">DECISION BRIEF</p><h2>포인트를 선택하면 판단 정보가 표시됩니다.</h2><p>낚시 이용 상태 · 현재 환경 예보 · 어종별 공식 지수 · 기준시각과 근거</p></>}</section>
+    <section className="brief-panel live-brief" aria-label="선택한 포인트 판단 브리프">{selected ? <><h2>{selected.placeName}</h2><p>공식 기준 포인트 · {selected.fishingType}</p>{accessStatus && <AccessStatusPanel status={accessStatus} />}{result && <OfficialIndexPanel result={result} />}<MarineCurrentPanel result={marineResult} busy={marineBusy} onRetry={() => loadMarine(selected)} /><button className="secondary-button" disabled={busy} onClick={() => void select(selected)}>공식 데이터 다시 조회</button></> : spot ? <SpotBrief source={spot.source} maxKm={NEARBY_MAX_KM} candidates={nearestCandidates} entries={spotEntries} slot={spotSlot} onSlotChange={setSpotSlot} marine={marineResult} marineBusy={marineBusy} marineBasis={marineBasis} onMarineRetry={() => { const target = spot.source === 'MAP' ? spot.coords : nearestCandidates[0]?.point; if (target) loadMarine(target) }} onPickPoint={setPreview} /> : <><p className="section-kicker">DECISION BRIEF</p><h2>포인트를 선택하면 판단 정보가 표시됩니다.</h2><p>낚시 이용 상태 · 현재 환경 예보 · 어종별 공식 지수 · 기준시각과 근거</p></>}</section>
   </main></div>
 }

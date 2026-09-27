@@ -15,6 +15,7 @@ export interface NearbyComparison {
   // The earliest forecast slot any compared point has ("YYYY-MM-DD · 오전" as normalizeOfficial
   // formats it). Only records at this exact slot are compared; other days are left out.
   slot?: string
+  slots: string[]
   points: { placeName: string; distanceKm: number; failed: boolean }[]
   species: NearbySpeciesRow[]
   trustStatuses: TrustStatus[]
@@ -24,11 +25,13 @@ export interface NearbyComparison {
 const GRADE_ORDER = ['매우좋음', '좋음', '보통', '나쁨', '매우나쁨']
 const gradeRank = (grade: string) => { const index = GRADE_ORDER.indexOf(grade); return index === -1 ? GRADE_ORDER.length : index }
 
-export function summarizeNearby(entries: NearbyEntry[]): NearbyComparison {
+// `requestedSlot` picks the day/half-day to compare; absent or unavailable → the earliest slot.
+export function summarizeNearby(entries: NearbyEntry[], requestedSlot?: string): NearbyComparison {
   const sorted = [...entries].sort((a, b) => a.distanceKm - b.distanceKm)
   const usable = sorted.flatMap(entry => 'species' in entry.result ? [{ entry, species: entry.result.species }] : [])
   // "YYYY-MM-DD · 오전" < "… · 오후" < next day lexically (전 U+C804 < 후 U+D6C4), so min = earliest.
-  const slot = usable.flatMap(item => item.species.map(record => record.evaluatedAt)).sort()[0]
+  const slots = [...new Set(usable.flatMap(item => item.species.map(record => record.evaluatedAt)))].sort()
+  const slot = requestedSlot && slots.includes(requestedSlot) ? requestedSlot : slots[0]
   const names = [...new Set(usable.flatMap(item => item.species.filter(record => record.evaluatedAt === slot).map(record => record.speciesName)))].sort((a, b) => a.localeCompare(b, 'ko'))
   const trust = new Set<TrustStatus>()
   const species = names.map(speciesName => {
@@ -44,6 +47,7 @@ export function summarizeNearby(entries: NearbyEntry[]): NearbyComparison {
   })
   return {
     ...(slot ? { slot } : {}),
+    slots,
     points: sorted.map(entry => ({ placeName: entry.point.placeName, distanceKm: entry.distanceKm, failed: !('species' in entry.result) })),
     species,
     trustStatuses: [...trust],
