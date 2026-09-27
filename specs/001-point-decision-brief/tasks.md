@@ -351,4 +351,4 @@ the last-seen httpClass through the existing onRetry callback instead of divergi
 
 - [X] T114 Research 우럭/감성돔/농어/돌돔/벵에돔 temperature + season at the v1.5 evidence bar; re-verify every adopted number on the source page (research/species-environment-evidence.md v1.6.6).
 - [X] T115 species-profiles.ts → profileVersion 2026-09-v3 (5 species updated, 참돔 placeholder ceiling replaced); environment-guidance tests updated to the new evidence.
-- [ ] T116 Full gate, commit/push, production check.
+- [X] T116 Full gate, commit/push, production check.

@@ -141,3 +141,6 @@ Japanese waters. CURRENT_SPEED, TIDE and TIME_OF_DAY stay UNKNOWN for every spec
 
 Net effect at 24.3~24.4℃ in September (unit test): 돌돔 HIGH; 감성돔·농어·우럭·참돔 MODERATE; 벵에돔
 INSUFFICIENT_EVIDENCE. The rule table (`computeSuitability`) is unchanged.
+
+Production (`198e6ee`, 2026-09-27, headless GPS at public spots): 신진도 (모항항 11.8 km 기준) and 가거도 (1.8 km) both show
+우럭·참돔·감성돔·농어 보통, 돌돔 높음, 벵에돔 판단 근거 부족. Gates: root tests 182, e2e 74 passed / 6 skipped.
