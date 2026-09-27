@@ -15,9 +15,8 @@ test.beforeEach(async ({ page }) => {
       }
     }}; window.fishNaverReady();` }))
   // Sanitized real-shaped KHOA items (confirmed 2026-09-16). 기타어종 must reach OFFICIAL INDEX but
-  // never ENVIRONMENT GUIDANCE. After the v1.5 evidence audit, only 참돔 has a peer-reviewed/academic
-  // temperature+season claim; every other supported species lands on INSUFFICIENT_EVIDENCE — the
-  // honest consequence of a weak-source-only threshold being removed rather than kept.
+  // never ENVIRONMENT GUIDANCE. Since the v1.6.6 evidence pass five species have cited temperature +
+  // season claims; 벵에돔 still lands on INSUFFICIENT_EVIDENCE (no cited adult temperature range).
   await page.route('https://proxy.example/**', route => route.fulfill({ json: { version: 1, fetchedAt: new Date().toISOString(), totalCount: 3, items: [
     { seafsPstnNm: '계약 시연 기준점', lat: 35, lot: 129, predcYmd: '20990101', predcNoonSeCd: '오전', seafsTgfshNm: '우럭', totalIndex: '좋음', lastScr: 70, minWtem: 12, maxWtem: 15 },
     { seafsPstnNm: '계약 시연 기준점', lat: 35, lot: 129, predcYmd: '20990101', predcNoonSeCd: '오전', seafsTgfshNm: '참돔', totalIndex: '보통', lastScr: 40 },
@@ -66,7 +65,8 @@ test('D: factors without evidence render as UNKNOWN text, never a synthetic valu
 
 test('E: insufficient evidence renders as 판단 근거 부족, not a fabricated result', async ({ page, isMobile }) => {
   await selectPoint(page, isMobile)
-  await expect(page.locator('.guidance-card', { hasText: '감성돔' }).getByText('환경 적합도 판단 근거 부족')).toBeVisible()
+  // v1.6.6: 감성돔 now has cited temperature + season; 벵에돔 (no adult temperature range) is the remaining case.
+  await expect(page.locator('.guidance-card', { hasText: '벵에돔' }).getByText('환경 적합도 판단 근거 부족')).toBeVisible()
 })
 
 test('F: no probability, AI, or recommendation language appears anywhere on the page', async ({ page, isMobile }) => {

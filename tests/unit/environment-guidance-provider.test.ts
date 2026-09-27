@@ -32,10 +32,23 @@ describe('computeEnvironmentGuidance', () => {
     const guidance = computeEnvironmentGuidance([noTemp], point, '20260916')
     for (const item of guidance) expect(item.factors.find(f => f.factor === 'WATER_TEMPERATURE')?.status).toBe('UNKNOWN')
   })
-  it('produces INSUFFICIENT_EVIDENCE for species with only water temperature evidence (감성돔, 농어)', () => {
+  // v1.6.6: 감성돔/농어 gained cited season windows, so the "no temperature range → INSUFFICIENT" rule
+  // is now exercised by 벵에돔 (season cited, adult temperature range not — egg-stage data excluded).
+  it('produces INSUFFICIENT_EVIDENCE for a species without a cited water temperature range (벵에돔)', () => {
     const guidance = computeEnvironmentGuidance([realShapedRecord], point, '20260916')
-    expect(guidance.find(item => item.speciesName === '감성돔')?.suitability).toBe('INSUFFICIENT_EVIDENCE')
-    expect(guidance.find(item => item.speciesName === '농어')?.suitability).toBe('INSUFFICIENT_EVIDENCE')
+    const blackfish = guidance.find(item => item.speciesName === '벵에돔')!
+    expect(blackfish.suitability).toBe('INSUFFICIENT_EVIDENCE')
+    expect(blackfish.factors.find(f => f.factor === 'WATER_TEMPERATURE')?.status).toBe('UNKNOWN')
+    expect(blackfish.factors.find(f => f.factor === 'SEASON')?.status).not.toBe('UNKNOWN')
+  })
+  it('evaluates the v1.6.6 cited profiles against 24.3~24.4℃ in September (rule table unchanged)', () => {
+    const guidance = computeEnvironmentGuidance([realShapedRecord], point, '20260916')
+    const level = (name: string) => guidance.find(item => item.speciesName === name)?.suitability
+    expect(level('돌돔')).toBe('HIGH') // 20~28℃ preferred, 5~11월 normal feeding (NIFS 돔류)
+    expect(level('감성돔')).toBe('MODERATE') // temperature MATCH, but September is outside 3~7월 spawning
+    expect(level('농어')).toBe('MODERATE') // 21~27℃ MATCH, September outside 12~3월
+    expect(level('우럭')).toBe('MODERATE') // above the 17~20℃ optimum but within 4~27℃ survival
+    expect(level('참돔')).toBe('MODERATE') // was LOW only because of the 18℃ placeholder ceiling
   })
   it('propagates STALE trust when the reference forecast date is in the past, independent of species-index conflict', () => {
     const past = { ...realShapedRecord, predcYmd: '20200101' }

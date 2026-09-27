@@ -112,3 +112,32 @@ KHOA 응답의 "기타어종"은 특정 생물종이 아니라 미분류 카테�
   CURRENT_SPEED factor를 종 프로파일 기반 판정에 사용하지 않는다(§ marine-current-source-review.md).
 - 물때(`tdlvHrCn`, 예: "중조기")의 공식 taxonomy와 어종 행동의 상관관계는 이번 조사에서 확보하지
   못했다. TIDE factor는 모든 종에서 `UNKNOWN`으로 유지된다.
+
+# v1.6.6 evidence pass (2026-09-27) — profileVersion 2026-09-v3
+
+Same bar as v1.5 (government / peer-reviewed / academic only; wiki, news, fishing media and search
+snippets excluded). Five parallel research passes, each required to open the source page; every number
+adopted below was then re-checked on the source page (abstract, full text or official PDF) before use.
+
+| 종 | 선호 수온 | 서식 가능 수온 | 계절 | 근거 (품질) |
+|---|---|---|---|---|
+| 우럭 | 17~20℃ | 4~27℃ | 4~5월 (산출기) | Mu 2026 Aquac. Int. (20℃ 최고 of 16/20/24) · Mizanur 2014 Aquac. Int. (17℃ > 20℃) · 양 2016 수산해양교육연구 (4℃ 14일 생존 100%) · Ma 2026 FSI (27℃ 60일 생존, 초록) · 김 2003 FAS (CTM 29.4~30.9℃) · 백 2000 한국수산학회지 (산출기 4~5월) — 전부 PEER_REVIEWED |
+| 참돔 | 18~20℃ (기존) | 6.54~**28**℃ | 4~6월 (기존) | 상한 18℃(v1.5 임시값, 근거 없음) → 국립수산과학원 돔류 서식수온 상한 28℃ (PRIMARY_GOVERNMENT, 돔류 공통) |
+| 감성돔 | 20~28℃ | 13~28℃ | 3~7월 (산란기) | 국립수산과학원 「돔류 질병 및 대책」 (PRIMARY_GOVERNMENT, 돔류 공통: 서식 13∼28℃, 20∼28℃ 적수온기) · 권 2009 한국어류학회지 (산란기 3~7월, 성기 5~6월) · MABIK (3~7월) |
+| 농어 | 21~27℃ | 17~30℃ | 12~3월 (산란기) | 강·한·전 2004 한국양식학회지 (사료효율 21~27℃, 정상 성장 17~30℃) · 강·한·안 2001 한국어류학회지 (통영 자연산 완숙·산란 12~3월) — PEER_REVIEWED |
+| 돌돔 | 20~28℃ | 13~28℃ | 5~11월 (정상 섭이기) | 국립수산과학원 돔류 문서 (공통값; 남해안 정상 섭이 5~11월, 수온 15℃ 이상) · 신 2020 한국수산과학회지 (LT50 6.99℃, 참고) |
+| 벵에돔 | **미사용** | **미사용** | 2~6월 (산란기) | Takai 2017 · Nakai 2015 Coastal Marine Science (일본 태평양 연안). 수온은 난 발생(15~21℃, 오 2010)만 확인 — 성어 기준 아님, 미사용 |
+
+Deliberately NOT used: 감성돔 species-specific single-point optima (18℃, 15℃) and 5℃ lower lethal
+bound (not ranges); 돌돔 "20~25℃ growth optima / CTmax 29~31℃" (one review sentence, no primary
+study); 돌돔 spawning months (only wiki/AI summaries); 벵에돔 FishBase/AquaMaps modelled range; 우럭
+"5~28℃ / 18~24℃" (secondary citation only, primary not opened); NIFS 농어 species page ("봄철 산란",
+contradicts two peer-reviewed winter-spawning studies and lists the wrong Japanese name).
+
+Caveats kept visible in each profile's evidence row: 돔류 values are group-level; season windows mix
+spawning/parturition months (우럭·감성돔·농어·벵에돔·참돔) and a normal-feeding period (돌돔), stated per
+species; most temperature data are aquaculture experiments on juveniles/yearlings; 벵에돔 season is from
+Japanese waters. CURRENT_SPEED, TIDE and TIME_OF_DAY stay UNKNOWN for every species.
+
+Net effect at 24.3~24.4℃ in September (unit test): 돌돔 HIGH; 감성돔·농어·우럭·참돔 MODERATE; 벵에돔
+INSUFFICIENT_EVIDENCE. The rule table (`computeSuitability`) is unchanged.
