@@ -429,3 +429,11 @@ point's KHOA tidal-current forecast via the Vercel marine proxy (`VITE_MARINE_AP
 fetched independently of the official index. The request/response time basis is undocumented and
 stays TBD (`timeBasis: 'UNCONFIRMED'`); the request window covers the present under both KST and UTC
 readings and no row is presented as "now". Species guidance is unchanged.
+
+# v1.6.4 governing delta
+
+See [v1.6.4-product-delta.md](v1.6.4-product-delta.md) (REQ-FUNC-NEARBY-001~004). After an arbitrary map
+click the user may request a side-by-side comparison of the nearest (at most 3) official points' own
+grades at one shared forecast slot. It is explicitly not a value for the clicked location and not a
+probability; nothing is interpolated, scored or ranked. The Worker marine route now mirrors the proxy's
+422 unsupported-area contract.

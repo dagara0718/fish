@@ -8,11 +8,15 @@ import { PointMap } from '../features/point-discovery/PointMap'
 import { OfficialIndexPanel } from '../features/official-index/OfficialIndexPanel'
 import { AccessStatusPanel } from '../features/official-index/AccessStatusPanel'
 import { MarineCurrentPanel } from '../features/official-index/MarineCurrentPanel'
+import { NearbyComparisonPanel } from '../features/official-index/NearbyComparisonPanel'
+import { summarizeNearby, type NearbyComparison } from '../official-index/nearby-comparison'
 import { SearchForm } from '../features/point-discovery/SearchForm'
 import { KhoaTidalCurrentProvider } from '../species-guidance/khoa-tidal-current-provider'
 import type { MarineCurrentResult } from '../species-guidance/contracts'
 
 const NEAREST_CANDIDATE_LIMIT = 5
+// Bounded so one comparison costs at most 3 official-index lookups against the shared Worker quota.
+const NEARBY_COMPARE_LIMIT = 3
 
 export function LiveApp() {
   const [provider] = useState(() => new LiveOfficialFishingIndexProvider(import.meta.env.VITE_FISHING_API_BASE_URL ?? ''))
@@ -33,6 +37,7 @@ export function LiveApp() {
   const [result, setResult] = useState<OfficialIndexResult>()
   const [marineResult, setMarineResult] = useState<MarineCurrentResult>()
   const [marineBusy, setMarineBusy] = useState(false)
+  const [nearby, setNearby] = useState<NearbyComparison | 'LOADING'>()
   const [accessStatus, setAccessStatus] = useState<FishingAccessStatus>()
   const [message, setMessage] = useState('포인트명으로 공식 기준 포인트를 검색해 주세요.')
   const [busy, setBusy] = useState(false)
@@ -49,7 +54,7 @@ export function LiveApp() {
     accessProvider.getAccessStatus(selected).then(status => { if (!disposed) setAccessStatus(status) })
     return () => { disposed = true }
   }, [selected, accessProvider])
-  const start = () => { request.current?.abort(); marineRequest.current?.abort(); setMarineBusy(false); const controller = new AbortController(); request.current = controller; setBusy(true); return controller }
+  const start = () => { request.current?.abort(); marineRequest.current?.abort(); setMarineBusy(false); setNearby(undefined); const controller = new AbortController(); request.current = controller; setBusy(true); return controller }
   // Only ever called with an explicitly selected official point — never a preview, arbitrary map
   // click or GPS fix — and only that point's already-public coordinates are sent (the provider
   // rounds them again to 3dp). Raw GPS never reaches the marine proxy.
@@ -90,6 +95,18 @@ export function LiveApp() {
       .finally(() => { if (!controller.signal.aborted) setBusy(false) })
     loadMarine(point)
   }
+  // v1.6.4 REQ-FUNC-NEARBY-001: only on an explicit button press after an arbitrary map click — the
+  // click itself still fetches no per-point data. Shares the main controller, so any navigation
+  // (start()) or unmount cancels it; one point's failure never hides the others.
+  const compareNearby = () => {
+    const controller = start(); setNearby('LOADING')
+    const targets = nearestCandidates.slice(0, NEARBY_COMPARE_LIMIT)
+    void Promise.all(targets.map(candidate => provider.getOfficialIndex(candidate.point, controller.signal)
+      .catch(() => ({ kind: 'COLLECTION_FAILED' as const, point: candidate.point, reason: '공식 데이터를 확인하지 못했습니다.', demo: false }))
+      .then(result => ({ point: candidate.point, distanceKm: candidate.distanceKm, result }))))
+      .then(entries => { if (!controller.signal.aborted) setNearby(summarizeNearby(entries)) })
+      .finally(() => { if (!controller.signal.aborted) setBusy(false) })
+  }
   // A marker/list click only previews an official point; it never fetches official data by itself.
   const previewOfficial = (point: OfficialFishingPointRef) => { setArbitrary(undefined); setNearestCandidates([]); setPreview(point) }
   const onMapBackgroundClick = async (coords: TransientCoordinates) => {
@@ -121,7 +138,7 @@ export function LiveApp() {
     <div className="mobile-view-switch"><button aria-pressed={view === 'list'} onClick={() => setView('list')}>목록</button><button aria-pressed={view === 'map'} onClick={() => setView('map')}>지도</button></div>
     <div className={`live-discovery view-${view}`}><aside className="discovery-panel"><h2>공식 후보 포인트</h2><p role="status">{busy ? '공식 데이터를 확인 중입니다.' : message}</p><ul className="live-candidates">{points.map(point => <li key={point.officialPointId}><button aria-pressed={preview?.officialPointId === point.officialPointId} onClick={() => previewOfficial(point)}><strong>{point.placeName}</strong><span>{point.regionContext} · {point.fishingType}</span><span>{location ? `${distanceKm(location, point).toFixed(1)} km · ` : ''}공식 지수 지원 →</span></button></li>)}</ul></aside><PointMap points={points} location={location} selectedId={selected?.officialPointId} previewId={preview?.officialPointId} arbitrary={arbitrary} onPreview={previewOfficial} onMapClick={coords => void onMapBackgroundClick(coords)} /></div>
     {arbitrary && !preview && <section className="point-preview arbitrary-preview"><div><h2>선택 위치</h2><p>지도에서 선택한 위치 · 공식 바다낚시지수 기준 포인트가 아닙니다.</p></div></section>}
-    {arbitrary && nearestCandidates.length > 0 && <section className="nearest-candidates" aria-label="선택 위치 주변 공식 기준 포인트"><h3>가장 가까운 공식 기준 포인트</h3><ul>{nearestCandidates.map(candidate => <li key={candidate.point.officialPointId}><div><strong>{candidate.point.placeName}</strong><span>{candidate.distanceKm.toFixed(1)} km · {candidate.point.fishingType}</span></div><button className="secondary-button" disabled={busy} onClick={() => setPreview(candidate.point)}>이 기준 포인트로 확인</button></li>)}</ul></section>}
+    {arbitrary && nearestCandidates.length > 0 && <section className="nearest-candidates" aria-label="선택 위치 주변 공식 기준 포인트"><h3>가장 가까운 공식 기준 포인트</h3><ul>{nearestCandidates.map(candidate => <li key={candidate.point.officialPointId}><div><strong>{candidate.point.placeName}</strong><span>{candidate.distanceKm.toFixed(1)} km · {candidate.point.fishingType}</span></div><button className="secondary-button" disabled={busy} onClick={() => setPreview(candidate.point)}>이 기준 포인트로 확인</button></li>)}</ul><button className="secondary-button" type="button" disabled={busy} onClick={compareNearby}>주변 {Math.min(NEARBY_COMPARE_LIMIT, nearestCandidates.length)}곳 공식 지수 비교</button>{nearby === 'LOADING' && <p role="status">주변 공식 기준 포인트 지수를 확인하는 중입니다.</p>}{nearby && nearby !== 'LOADING' && <NearbyComparisonPanel comparison={nearby} />}</section>}
     {preview && <section className="point-preview"><div><h2>{preview.placeName}</h2><p>공식 바다낚시지수 기준 포인트 · {preview.fishingType}</p><p>{location ? `현재 위치와 ${distanceKm(location, preview).toFixed(1)} km · 거리 기반 후보 · ${selected?.officialPointId === preview.officialPointId ? '사용자 확인됨' : '아직 선택하지 않음'}` : arbitrary ? `선택 위치와 ${distanceKm(arbitrary, preview).toFixed(1)} km` : '공식 바다낚시지수 기준 포인트입니다.'}</p></div><button className="primary-button" disabled={busy} onClick={() => void select(preview)}>이 포인트 선택</button></section>}
     <section className="brief-panel live-brief" aria-label="선택한 포인트 판단 브리프">{selected ? <><h2>{selected.placeName}</h2><p>공식 기준 포인트 · {selected.fishingType}</p>{accessStatus && <AccessStatusPanel status={accessStatus} />}{result && <OfficialIndexPanel result={result} />}<MarineCurrentPanel result={marineResult} busy={marineBusy} onRetry={() => loadMarine(selected)} /><button className="secondary-button" disabled={busy} onClick={() => void select(selected)}>공식 데이터 다시 조회</button></> : <><p className="section-kicker">DECISION BRIEF</p><h2>포인트를 선택하면 판단 정보가 표시됩니다.</h2><p>낚시 이용 상태 · 현재 환경 예보 · 어종별 공식 지수 · 기준시각과 근거</p></>}</section>
   </main></div>

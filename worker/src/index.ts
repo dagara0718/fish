@@ -3,7 +3,7 @@ import { parseOfficialResponse, validDate } from '../../shared/fishing-api'
 // bundle files inside their own project Root Directory — see marine-proxy/shared/marine-response.ts
 // for the full rationale (v1.6.2 VERCEL_ESM_MODULE_RESOLUTION). wrangler has no such restriction and
 // resolves this relative path against the full repo checkout like any other local import.
-import { MARINE_PARAMS, validCoordinate, validHour, validMinute, validateMarineResponse } from '../../marine-proxy/shared/marine-response'
+import { MARINE_PARAMS, isNoSearchData, validCoordinate, validHour, validMinute, validRange, validateMarineResponse } from '../../marine-proxy/shared/marine-response'
 
 interface RateLimiter { limit(input: { key: string }): Promise<{ success: boolean }> }
 export interface Env { KHOA_FISHING_SERVICE_KEY?: string; KHOA_MARINE_SERVICE_KEY?: string; REQUEST_LIMITER?: RateLimiter }
@@ -49,7 +49,8 @@ async function proxyUpstream(remote: URL, deps: Dependencies, reply: (status: nu
     const body = await response.text()
     if (body.length > 2_000_000) return reply(502, { error: 'MALFORMED_RESPONSE' })
     let parsed: unknown
-    try { parsed = malformedCheck(body) } catch { return reply(502, { error: 'MALFORMED_RESPONSE' }) }
+    // NO_DATA_FOR_LOCATION: see the marine route below. Never cached — it is an answer, not data.
+    try { parsed = malformedCheck(body) } catch (error) { return error instanceof Error && error.message === 'NO_DATA_FOR_LOCATION' ? reply(422, { error: 'NO_DATA_FOR_LOCATION' }) : reply(502, { error: 'MALFORMED_RESPONSE' }) }
     const serialized = JSON.stringify(parsed)
     if (redact(serialized)) return reply(502, { error: 'MALFORMED_RESPONSE' })
     if (cacheKey) await deps.cache?.put(cacheKey, new Response(serialized, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${cacheTtlSeconds}` } })).catch(() => undefined)
@@ -89,6 +90,9 @@ async function handleMarineCurrent(url: URL, env: Env, reply: (status: number, b
   const sdate = url.searchParams.get('SDate'); const edate = url.searchParams.get('EDate')
   const resultType = url.searchParams.get('ResultType') ?? 'json'
   if (!validDate(sdate ?? '') || !validDate(edate ?? '') || !validHour(url.searchParams.get('SHour')) || !validMinute(url.searchParams.get('SMinute')) || !validHour(url.searchParams.get('EHour')) || !validMinute(url.searchParams.get('EMinute')) || !validCoordinate(url.searchParams.get('lat'), 90) || !validCoordinate(url.searchParams.get('lon'), 180) || resultType !== 'json') return reply(400, { error: 'INVALID_PARAMETERS' })
+  // Same unsupported-area contract as marine-proxy (v1.6.3 REQ-FUNC-MARINE-UI-008): an end-before-start
+  // window also yields KHOA's "No search data", so it is rejected before the upstream call.
+  if (!validRange(sdate!, url.searchParams.get('SHour')!, url.searchParams.get('SMinute')!, edate!, url.searchParams.get('EHour')!, url.searchParams.get('EMinute')!)) return reply(400, { error: 'INVALID_PARAMETERS' })
   const secret = env.KHOA_MARINE_SERVICE_KEY?.trim()
   if (!secret) return reply(503, { error: 'NOT_CONFIGURED' })
   // Round to 3dp server-side too (defense in depth) — never the literal exact-GPS value in the
@@ -105,7 +109,7 @@ async function handleMarineCurrent(url: URL, env: Env, reply: (status: number, b
   // fishing-index route's unrelated 5-minute value (v1.6 REQ-NFR-MARINE-003).
   return proxyUpstream(remote, deps, reply, cacheKey, 600,
     text => text.includes(secret) || text.includes(encodeURIComponent(secret)),
-    validateMarineResponse, false)
+    body => { if (isNoSearchData(body)) throw new Error('NO_DATA_FOR_LOCATION'); return validateMarineResponse(body) }, false)
 }
 
 export async function handleRequest(request: Request, env: Env, deps: Dependencies = { fetch: boundFetch, now: () => new Date() }): Promise<Response> {

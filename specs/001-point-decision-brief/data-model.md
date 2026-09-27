@@ -306,3 +306,11 @@ absent when KHOA sends `type: ""`; `SLACK` = KHOA's 전류, renamed from v1.6's 
 `sourceTimestamp` (client retrieval time, ISO UTC). `MarineCurrentResult.status` unchanged
 (`SUCCESS | PARTIAL | STALE | UNAVAILABLE | UNSUPPORTED_AREA | NOT_CONNECTED`); the provider now returns
 `NOT_CONNECTED` (instead of throwing) for an unset/invalid base URL.
+
+# v1.6.4 governing delta
+
+See [v1.6.4-product-delta.md](v1.6.4-product-delta.md) (REQ-FUNC-NEARBY-001~004). After an arbitrary map
+click the user may request a side-by-side comparison of the nearest (at most 3) official points' own
+grades at one shared forecast slot. It is explicitly not a value for the clicked location and not a
+probability; nothing is interpolated, scored or ranked. The Worker marine route now mirrors the proxy's
+422 unsupported-area contract.

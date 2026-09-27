@@ -122,6 +122,23 @@ describe('Worker marine current route', () => {
     await handleRequest(makeMarine(), marineEnv, d)
     expect(d.fetch).toHaveBeenCalledTimes(1)
   })
+  it('maps KHOA "No search data" for a valid window to 422 NO_DATA_FOR_LOCATION and does not cache it', async () => {
+    const put = vi.fn().mockResolvedValue(undefined)
+    const d = { ...marineDeps(), cache: { match: vi.fn().mockResolvedValue(undefined), put } }
+    d.fetch.mockResolvedValue(new Response(JSON.stringify({ result: { error: 'No search data' } }), { headers: { 'Content-Type': 'text/html;charset=UTF-8' } }))
+    const response = await handleRequest(makeMarine(), marineEnv, d)
+    expect(response.status).toBe(422); expect(await response.json()).toEqual({ error: 'NO_DATA_FOR_LOCATION' })
+    expect(put).not.toHaveBeenCalled()
+  })
+  it('rejects an end-before-start marine window with 400 before calling KHOA', async () => {
+    const d = marineDeps()
+    expect((await handleRequest(makeMarine('SDate=20260916&SHour=12&SMinute=30&EDate=20260916&EHour=11&EMinute=30&lat=35.123&lon=129.456&ResultType=json'), marineEnv, d)).status).toBe(400)
+    expect(d.fetch).not.toHaveBeenCalled()
+  })
+  it('keeps any other marine error shape a 502, never unsupported area', async () => {
+    const d = marineDeps(); d.fetch.mockResolvedValue(Response.json({ result: { error: 'SERVICE KEY IS NOT REGISTERED' } }))
+    expect((await handleRequest(makeMarine(), marineEnv, d)).status).toBe(502)
+  })
   it('classifies marine upstream failure and redacts the marine secret from error bodies', async () => {
     const d = marineDeps(); d.fetch.mockResolvedValue(new Response(marineKey, { status: 500 }))
     const result = await handleRequest(makeMarine(), marineEnv, d)

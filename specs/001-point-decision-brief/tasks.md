@@ -332,3 +332,10 @@ the last-seen httpClass through the existing onRetry callback instead of divergi
 - [X] T103 Full verification gate + Desktop/Mobile visual review + v1.6.3 analyze; Depends on: T102; Blocks: T104.
 - [X] T104 Commit/push main; verify Pages deploy and a live marine lookup in the deployed page; Depends on: T103.
 - [X] T105 Marine proxy unsupported-area signal: validRange + isNoSearchData in marine-proxy/shared/marine-response.ts, 422 NO_DATA_FOR_LOCATION in marine-proxy/src/index.ts, client 422 → UNSUPPORTED_AREA; proxy/unit/E2E tests; deploy via Vercel Git integration (Root Directory marine-proxy) and verify live; REQ-FUNC-MARINE-UI-008; Depends on: T104.
+
+# v1.6.4 Tasks — nearby official-point comparison; Worker marine 422
+
+- [X] T106 Worker /api/marine-current: validRange + isNoSearchData → 422 NO_DATA_FOR_LOCATION (never cached) in worker/src/index.ts; tests; REQ-FUNC-MARINE-UI-008.
+- [X] T107 summarizeNearby in src/official-index/nearby-comparison.ts + tests/unit/nearby-comparison.test.ts; REQ-FUNC-NEARBY-002~003.
+- [X] T108 NearbyComparisonPanel.tsx, LiveApp compareNearby (explicit, ≤3 lookups, cancelled by navigation), global.css; e2e/nearby-comparison.spec.ts; REQ-FUNC-NEARBY-001~004.
+- [ ] T109 Full verification gate + commit/push main + Worker deploy + Pages verification; Depends on: T106-T108.
