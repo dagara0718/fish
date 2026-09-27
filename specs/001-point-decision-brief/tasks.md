@@ -357,4 +357,4 @@ the last-seen httpClass through the existing onRetry callback instead of divergi
 
 - [X] T117 Verify official species coverage (full catalog via Worker and direct upstream) and document the gubun no-op.
 - [X] T118 Research + re-verify 광어/볼락/쥐노래미; add profiles (v4); unit test for the three.
-- [ ] T119 Full gate, commit/push, production check.
+- [X] T119 Full gate, commit/push, production check.

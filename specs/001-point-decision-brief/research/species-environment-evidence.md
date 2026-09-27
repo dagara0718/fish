@@ -169,3 +169,7 @@ apis.data.go.kr (1,750 rows, 7 forecast days), contains only these `seafsTgfshNm
 `gubun=갯바위` and `gubun=선상`** (same totalCount, points and rows) although the spec marks `gubun`
 as a required "갯바위/선상 중 택 1" filter — so the app's 포인트 유형 selector currently has no effect
 on the data. Recorded as a provider-side behaviour, not worked around.
+
+Production (`e23e770`, 신진도 GPS spot, 모항항 forecast): 우럭·참돔·감성돔·농어·광어·쥐노래미 보통, 돌돔 높음, 벵에돔·볼락
+판단 근거 부족; no horizontal overflow. Gates: root tests 183, e2e 74 passed / 6 skipped (one earlier run had a single
+non-reproducing failure under a slow 52 s run; two reruns clean).
