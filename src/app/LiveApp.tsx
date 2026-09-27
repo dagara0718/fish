@@ -31,7 +31,9 @@ export function LiveApp() {
   const [marineProvider] = useState(() => new KhoaTidalCurrentProvider(import.meta.env.VITE_MARINE_API_BASE_URL ?? ''))
   const [accessProvider] = useState(() => new UnverifiedFishingAccessProvider())
   const [query, setQuery] = useState('')
-  const [type, setType] = useState<FishingType>('갯바위')
+  // The upstream requires gubun but returns identical data for 갯바위 and 선상 (verified 2026-09-27,
+  // research/species-environment-evidence.md), so the selector is hidden and the required value fixed.
+  const type: FishingType = '갯바위'
   const [points, setPoints] = useState<OfficialFishingPointRef[]>([])
   const [location, setLocation] = useState<TransientCoordinates>()
   const [arbitrary, setArbitrary] = useState<TransientCoordinates>()
@@ -154,7 +156,7 @@ export function LiveApp() {
     }, () => { if (alive.current) setMessage('위치 권한이 거부되었거나 위치를 사용할 수 없습니다. 검색은 계속 이용할 수 있습니다.') }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 })
   }
   return <div className="app-shell"><header className="product-header"><div className="brand"><span className="brand-symbol">◎</span>포인트 판단</div><span className="demo-badge">LIVE · 공식 데이터</span></header><main id="main">
-    <section className="search-surface"><div className="search-copy"><p className="section-kicker">POINT SEARCH</p><h1>어디로 출조할 예정인가요?</h1><p>공식 기준 포인트를 찾고, 어종별 지수와 데이터 근거를 확인하세요.</p></div><div className="search-actions"><SearchForm query={query} onQueryChange={setQuery} onSearch={() => void search()} /><button className="secondary-button" onClick={locate}>⌖ 현재 위치 사용</button></div><div className="example-row"><label>포인트 유형 <select value={type} onChange={event => setType(event.target.value as FishingType)}><option>갯바위</option><option>선상</option></select></label><details><summary>데이터·위치 안내</summary><p>위치는 이 화면 메모리에만 유지됩니다. 지도 이용 시 NAVER에 지도 영역 요청이 전달됩니다. 공식 예보는 실제 관측값이나 출조 판단이 아닙니다.</p></details></div></section>
+    <section className="search-surface"><div className="search-copy"><p className="section-kicker">POINT SEARCH</p><h1>어디로 출조할 예정인가요?</h1><p>공식 기준 포인트를 찾고, 어종별 지수와 데이터 근거를 확인하세요.</p></div><div className="search-actions"><SearchForm query={query} onQueryChange={setQuery} onSearch={() => void search()} /><button className="secondary-button" onClick={locate}>⌖ 현재 위치 사용</button></div><div className="example-row"><details><summary>데이터·위치 안내</summary><p>위치는 이 화면 메모리에만 유지됩니다. 지도 이용 시 NAVER에 지도 영역 요청이 전달됩니다. 공식 예보는 실제 관측값이나 출조 판단이 아닙니다.</p></details></div></section>
     {!import.meta.env.VITE_FISHING_API_BASE_URL && <p className="inline-state" role="status">실시간 공식 데이터 연결이 설정되지 않았습니다. 예시를 보려면 Demo 모드를 선택하세요.</p>}
     <div className="mobile-view-switch"><button aria-pressed={view === 'list'} onClick={() => setView('list')}>목록</button><button aria-pressed={view === 'map'} onClick={() => setView('map')}>지도</button></div>
     <div className={`live-discovery view-${view}`}><aside className="discovery-panel"><h2>공식 후보 포인트</h2><p role="status">{busy ? '공식 데이터를 확인 중입니다.' : message}</p><ul className="live-candidates">{points.map(point => <li key={point.officialPointId}><button aria-pressed={preview?.officialPointId === point.officialPointId} onClick={() => previewOfficial(point)}><strong>{point.placeName}</strong><span>{point.regionContext} · {point.fishingType}</span><span>{location ? `${distanceKm(location, point).toFixed(1)} km · ` : ''}공식 지수 지원 →</span></button></li>)}</ul></aside><PointMap points={points} location={location} selectedId={selected?.officialPointId} previewId={preview?.officialPointId} arbitrary={arbitrary} onPreview={previewOfficial} onMapClick={coords => void onMapBackgroundClick(coords)} /></div>
