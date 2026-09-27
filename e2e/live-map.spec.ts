@@ -71,7 +71,7 @@ test('arbitrary map click surfaces nearest official candidates without auto-sele
   await expect(page.getByRole('heading', { name: '가장 가까운 공식 기준 포인트' })).toBeVisible()
   await expect(page.getByRole('button', { name: '× 선택 위치' })).toBeVisible()
   await expect(page.getByRole('button', { name: '이 기준 포인트로 확인' })).toBeVisible()
-  await expect(page.getByText(/km/)).toBeVisible()
+  await expect(page.getByText(/\d+\.\d km · /)).toBeVisible() // candidate distance (the 15 km comparison label also contains 'km')
   await page.screenshot({ path: `test-results/screenshots/v1.3-${isMobile ? 'mobile' : 'desktop'}-arbitrary-click.png`, fullPage: true })
   // The catalog listing (search) has no placeName; only a confirmed per-point selection adds one.
   const perPointCalls = () => indexCalls.filter(url => url.includes('placeName=')).length
