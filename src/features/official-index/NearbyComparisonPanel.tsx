@@ -6,7 +6,7 @@ import { TrustBadge } from '../decision-brief/TrustBadge'
 export function NearbyComparisonPanel({ comparison }: { comparison: NearbyComparison }) {
   const loaded = comparison.points.filter(point => !point.failed)
   return <section className="nearby-comparison" aria-labelledby="nearby-heading">
-    <div className="section-title-row"><div><p className="section-kicker">NEARBY OFFICIAL POINTS</p><h3 id="nearby-heading">주변 공식 기준 포인트 지수 비교</h3><p>선택 위치 자체의 값이 아닙니다. 가까운 공식 기준 포인트 {comparison.points.length}곳의 공식 바다낚시지수(낚시 여건 등급)를 나란히 보여줍니다. 어종 출현·조과 확률이 아닙니다.</p></div><div className="marine-badges">{comparison.trustStatuses.map(status => <TrustBadge key={status} status={status} />)}</div></div>
+    <div className="section-title-row"><div><p className="section-kicker">NEARBY OFFICIAL POINTS</p><h3 id="nearby-heading">주변 공식 기준 포인트 지수 비교</h3><p>선택 위치 자체의 값이 아닙니다. 15 km 이내 가까운 공식 기준 포인트 {comparison.points.length}곳의 공식 바다낚시지수(낚시 여건 등급)를 나란히 보여줍니다. 어종 출현·조과 확률이 아닙니다.</p></div><div className="marine-badges">{comparison.trustStatuses.map(status => <TrustBadge key={status} status={status} />)}</div></div>
     <ul className="nearby-points">{comparison.points.map(point => <li key={point.placeName + point.distanceKm}><strong>{point.placeName}</strong> <span className="mono">{point.distanceKm.toFixed(1)} km</span>{point.failed && <span> · 공식 데이터 확인 실패</span>}</li>)}</ul>
     {!comparison.slot || comparison.species.length === 0
       ? <div className="inline-state"><strong>비교할 공식 지수가 없습니다</strong><p>주변 포인트의 공식 데이터를 확인하지 못했습니다. 후보를 직접 선택해 확인해 주세요.</p></div>

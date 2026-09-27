@@ -38,7 +38,7 @@ test('compares the nearest 3 official points only on request, never as a value o
   await page.locator('[data-mock-map]').click({ position: { x: 250, y: 300 } })
   await expect(page.getByRole('heading', { name: '가장 가까운 공식 기준 포인트' })).toBeVisible()
   expect(perPoint).toHaveLength(0) // the click alone fetches nothing per point
-  await page.getByRole('button', { name: '주변 3곳 공식 지수 비교' }).click()
+  await page.getByRole('button', { name: '주변 3곳 공식 지수 비교 (15 km 이내)' }).click()
   const panel = page.locator('.nearby-comparison')
   await expect(panel.getByRole('heading', { name: '주변 공식 기준 포인트 지수 비교' })).toBeVisible()
   expect([...new Set(perPoint)].sort()).toEqual(['가까운 시연 기준점', '실패 시연 기준점', '중간 시연 기준점'].sort())
@@ -80,4 +80,22 @@ test('a new map click cancels and clears a comparison', async ({ page, isMobile 
   await page.waitForTimeout(2000)
   await expect(page.locator('.nearby-comparison')).toHaveCount(0)
   await expect(page.getByText('주변 공식 기준 포인트 지수를 확인하는 중입니다.')).toHaveCount(0)
+})
+
+test('offers no comparison when no official point is within 15 km', async ({ page, isMobile }) => {
+  const perPoint: string[] = []
+  await page.route('https://proxy.example/**', route => {
+    const name = new URL(route.request().url()).searchParams.get('placeName')
+    if (name) perPoint.push(name)
+    const far = POINTS[3]!
+    return route.fulfill({ json: { version: 1, fetchedAt: new Date().toISOString(), totalCount: 1, items: [{ seafsPstnNm: far.name, lat: far.lat, lot: 129.05, predcYmd: '20990101', predcNoonSeCd: '오전', seafsTgfshNm: '감성돔', totalIndex: '좋음' }] } })
+  })
+  await page.goto('./')
+  await page.getByRole('button', { name: '검색', exact: true }).click()
+  if (isMobile) await page.getByRole('button', { name: '지도', exact: true }).click()
+  await page.locator('[data-mock-map]').click({ position: { x: 250, y: 300 } })
+  await expect(page.getByRole('heading', { name: '가장 가까운 공식 기준 포인트' })).toBeVisible() // 38.9 km: still a candidate
+  await expect(page.getByText('15 km 이내에 공식 기준 포인트가 없어 주변 비교를 제공하지 않습니다.', { exact: false })).toBeVisible()
+  await expect(page.getByRole('button', { name: /공식 지수 비교/ })).toHaveCount(0)
+  expect(perPoint).toHaveLength(0)
 })
