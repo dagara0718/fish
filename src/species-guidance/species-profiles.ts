@@ -11,7 +11,7 @@ import type { SpeciesEvidence, SpeciesProfile } from './contracts'
 // Claim units (read before comparing species): preferred = a documented growth/feeding optimum;
 // tolerated = a documented survival/habitat range (not a lethal limit unless stated); season = the
 // documented spawning/parturition or normal-feeding months named in each evidence row.
-export const PROFILE_VERSION = '2026-09-v3'
+export const PROFILE_VERSION = '2026-09-v4'
 const reviewedAt = '2026-09-27T00:00:00.000Z'
 
 // 국립수산과학원 document covering 돔류 as a group, explicitly naming 참돔·감성돔·돌돔. Group-level values,
@@ -115,6 +115,58 @@ export const SPECIES_PROFILES: SpeciesProfile[] = [
       { sourceTitle: 'Sexual maturation of Girella punctata and G. leonina in the neritic sea off the Pacific coast of Japan (Takai et al. 2017)', sourceOrganization: 'Coastal Marine Science (peer-reviewed)', quality: 'PEER_REVIEWED', sourceUrl: 'https://repository.dl.itc.u-tokyo.ac.jp/record/48904/files/CMS400102.pdf', retrievedAt: reviewedAt, supportedClaim: '산란기 2~6월(선행연구 일치), 다네가시마 3월·이즈 4월 GSI 최고 — 일본 태평양 연안' },
       { sourceTitle: 'Spawning ecology of Girella punctata and G. leonina in the coastal waters of the Izu Peninsula (Nakai et al. 2015)', sourceOrganization: 'Coastal Marine Science (peer-reviewed)', quality: 'PEER_REVIEWED', sourceUrl: 'https://repository.dl.itc.u-tokyo.ac.jp/record/40625/files/CMS380103.pdf', retrievedAt: reviewedAt, supportedClaim: '이즈반도 산란기 4~5월(GSI 최고)' },
       { sourceTitle: '벵에돔과 긴꼬리벵에돔의 난 발생에 미치는 수온의 영향 (오 등 2010)', sourceOrganization: '발생과 생식 (peer-reviewed)', quality: 'PEER_REVIEWED', sourceUrl: 'https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART001463323', retrievedAt: reviewedAt, supportedClaim: '난 발생 적정 15~21℃, 24℃ 이상 비정상 — 알 단계 수치라 성어 수온 factor에 사용하지 않음' },
+    ],
+    profileVersion: PROFILE_VERSION, reviewedAt,
+  },
+  // v1.6.7 (user request): three species KHOA's fishing index does NOT cover (it only lists 감성돔·농어·
+  // 돌돔·우럭·참돔·벵에돔 + 기타어종 — verified against the full upstream catalog 2026-09-27). They get
+  // environment guidance only; there is no official grade for them.
+  {
+    // Preferred = the "서식 적수온 18-25℃" stated in a peer-reviewed KFAS paper (introduction, uncited
+    // there) and consistent with maximum juvenile growth at 25℃ (Fonds et al. 1995). Tolerated = the
+    // range over which adult-sized fish kept a normal oxygen-consumption rhythm (5.8℃ minimum rate to
+    // 26.4℃), a metabolic range rather than a lethal limit. Season = NIFS spawning months.
+    speciesId: 'olive-flounder', canonicalName: '광어', aliases: ['넙치', 'Paralichthys olivaceus'],
+    preferredWaterTemperature: { min: 18, max: 25 },
+    toleratedWaterTemperature: { min: 5.8, max: 26.4 },
+    seasonalActiveMonths: [2, 3, 4, 5, 6],
+    habitatContext: '저서성, 수심 20~40m 암초·자갈 바닥에서 산란 (근거: 국립수산과학원)',
+    evidence: [
+      { sourceTitle: '넙치 (주요생물 생태와 생활사)', sourceOrganization: '국립수산과학원 (government research institute)', quality: 'PRIMARY_GOVERNMENT', sourceUrl: 'https://www.nifs.go.kr/contents/actionContentsCons0088.do', retrievedAt: reviewedAt, supportedClaim: '산란기 2∼6월, 수심 20∼40m 암초·자갈 바닥 산란' },
+      { sourceTitle: 'Optimum feeding rates for growing and sub-adult olive flounder fed practical extruded pellets at high water temperature (김 등 2015)', sourceOrganization: '한국수산과학회지 (peer-reviewed)', quality: 'PEER_REVIEWED', sourceUrl: 'https://www.koreascience.kr/article/JAKO201536553417204.page', retrievedAt: reviewedAt, supportedClaim: '넙치의 서식 적수온 18-25℃ (서론 기술 — 선호 구간)' },
+      { sourceTitle: 'Feeding and growth of juvenile Japanese flounder Paralichthys olivaceus in relation to temperature and food supply (Fonds et al. 1995)', sourceOrganization: 'Netherlands Journal of Sea Research (peer-reviewed)', quality: 'PEER_REVIEWED', sourceUrl: 'https://www.sciencedirect.com/science/article/abs/pii/0077757995900195', retrievedAt: reviewedAt, supportedClaim: '치어 최대 성장 25℃ — 선호 구간 상단과 일치' },
+      { sourceTitle: 'Effects of temperature changes on the endogenous rhythm of oxygen consumption in the Japanese flounder (김 등 2005)', sourceOrganization: 'Fisheries Science (peer-reviewed)', quality: 'PEER_REVIEWED', sourceUrl: 'https://link.springer.com/article/10.1111/j.1444-2906.2005.00990.x', retrievedAt: reviewedAt, supportedClaim: '전장 28cm 이상 — 5.8℃ 최소 대사율, 26.4℃까지 산소소비 리듬 유지, 28.4℃ 이상 리듬 붕괴 (서식 가능 구간 5.8~26.4℃, 치사 한계 아님)' },
+    ],
+    profileVersion: PROFILE_VERSION, reviewedAt,
+  },
+  {
+    // Season confirmed (Korean parturition January~February, peer-reviewed). No experimental survival
+    // or growth range was found — only behaviour peaks at set temperatures and a feeding slowdown ≥23℃
+    // — so no temperature range → INSUFFICIENT_EVIDENCE, like 벵에돔. Korean sources use the pre-split
+    // "Sebastes inermis" sense.
+    speciesId: 'dark-banded-rockfish', canonicalName: '볼락', aliases: ['Sebastes inermis'],
+    seasonalActiveMonths: [1, 2],
+    habitatContext: '연안 암초 지대 (근거: 정성적 서술)',
+    evidence: [
+      { sourceTitle: 'Lee & Kim (1992) 볼락 생식주기 연구 — 한국수산과학회지 25(5):413-431 (제목 표기는 설명용)', sourceOrganization: '한국수산과학회지 (peer-reviewed)', quality: 'PEER_REVIEWED', sourceUrl: 'https://koreascience.kr/article/JAKO199223607640482.page', retrievedAt: reviewedAt, supportedClaim: '통영 — 수정 12~1월, 난 발생·자어 방출 1~2월 (계절 구간)' },
+      { sourceTitle: 'Heo, Kim & Shin (2016) 볼락 수온별 행동 실험 — 52(3):191-196 (제목 표기는 설명용)', sourceOrganization: '한국수산해양기술학회지 (peer-reviewed)', quality: 'PEER_REVIEWED', sourceUrl: 'https://koreascience.kr/article/JAKO201627038926529.page', retrievedAt: reviewedAt, supportedClaim: '이동거리 최대 20℃, 이동시간 비율 최대 14℃, 최소 26℃ (10마리) — 서식 범위 근거로는 부족해 수온 factor 미사용' },
+    ],
+    profileVersion: PROFILE_VERSION, reviewedAt,
+  },
+  {
+    // Preferred = optimal growth 15~20℃ (peer-reviewed lab trial, Chinese stock). Tolerated = the
+    // "proper" range 14~23℃ for 4-month juveniles (peer-reviewed, Shandong) — acceptable growth and
+    // survival in that trial, not a lethal limit. Season = Korean west-coast ripe/spawning September~
+    // December (peer-reviewed, NIFS author).
+    speciesId: 'fat-greenling', canonicalName: '쥐노래미', aliases: ['Hexagrammos otakii'],
+    preferredWaterTemperature: { min: 15, max: 20 },
+    toleratedWaterTemperature: { min: 14, max: 23 },
+    seasonalActiveMonths: [9, 10, 11, 12],
+    habitatContext: '연안 암초·해조 지대 (근거: 정성적 서술)',
+    evidence: [
+      { sourceTitle: 'Effects of temperature stress on liver histology, oxidative stress, and transcriptome in fat greenling (Hexagrammos otakii) (Zhang et al. 2025)', sourceOrganization: 'Aquaculture International (peer-reviewed)', quality: 'PEER_REVIEWED', sourceUrl: 'https://link.springer.com/article/10.1007/s10499-025-02101-w', retrievedAt: reviewedAt, supportedClaim: '최적 성장 수온 15~20℃ (선호 구간), 25℃에서 간 손상' },
+      { sourceTitle: '温度和盐度变化对大泷六线鱼幼鱼存活与生长的影响 (胡 등 2012)', sourceOrganization: '海洋科学 Marine Sciences (peer-reviewed)', quality: 'PEER_REVIEWED', sourceUrl: 'http://qdhys.ijournal.cn/hykx/ch/reader/view_abstract.aspx?file_no=20120708&st=alljournals', retrievedAt: reviewedAt, supportedClaim: '4개월 치어 적정 수온 14~23℃, 최적 17~23℃, 20℃에서 성장 최대 (서식 가능 구간)' },
+      { sourceTitle: '서해산 쥐노래미 Hexagrammos otakii의 성성숙과 산란 특성 (강·정·김 2004)', sourceOrganization: '한국양식학회지 (peer-reviewed, 국립수산과학원 저자)', quality: 'PEER_REVIEWED', sourceUrl: 'https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART001145820', retrievedAt: reviewedAt, supportedClaim: '서해 암컷 완숙·산란기 9~12월 (계절 구간)' },
     ],
     profileVersion: PROFILE_VERSION, reviewedAt,
   },

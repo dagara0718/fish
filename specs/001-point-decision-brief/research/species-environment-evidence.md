@@ -144,3 +144,28 @@ INSUFFICIENT_EVIDENCE. The rule table (`computeSuitability`) is unchanged.
 
 Production (`198e6ee`, 2026-09-27, headless GPS at public spots): 신진도 (모항항 11.8 km 기준) and 가거도 (1.8 km) both show
 우럭·참돔·감성돔·농어 보통, 돌돔 높음, 벵에돔 판단 근거 부족. Gates: root tests 182, e2e 74 passed / 6 skipped.
+
+# v1.6.7 — 광어·볼락·쥐노래미 (user request, 2026-09-27) — profileVersion 2026-09-v4
+
+These three species are **not covered by the KHOA fishing index** (see "Official species coverage"
+below): they get environment guidance only, never an official grade. Same evidence bar and the same
+re-check of every adopted number on the source page.
+
+| 종 | 선호 | 서식 가능 | 계절 | 근거 |
+|---|---|---|---|---|
+| 광어(넙치) | 18~25℃ | 5.8~26.4℃ (대사 리듬 유지 구간, 치사 한계 아님) | 2~6월 산란 | NIFS 넙치 생태 페이지 (PRIMARY_GOVERNMENT) · 김 등 2015 KFAS 서론 "서식 적수온 18-25℃" · Fonds 1995 (치어 최대 성장 25℃) · 김 등 2005 Fish. Sci. (성어 크기, 5.8℃ 최소 대사율~26.4℃ 리듬 유지) |
+| 볼락 | 미사용 | 미사용 | 1~2월 산자 | 이·김 1992 한국수산과학회지 (통영). 수온은 행동 실험(이동 최대 14~20℃)·먹이활동 둔화(≥23℃, 에히메현 수산연구센터)뿐이라 서식 범위로 쓰지 않음 → 판단 근거 부족 |
+| 쥐노래미 | 15~20℃ | 14~23℃ | 9~12월 산란 | Zhang 2025 Aquac. Int. (최적 성장 15~20℃) · 胡 2012 海洋科学 (4개월 치어 적정 14~23℃) · 강·정·김 2004 한국양식학회지 (서해 완숙·산란 9~12월) |
+
+Not used: 쥐노래미 "2~26℃ / 16~21℃" (cited to an unrelated salmon paper); 광어 lower lethal 0.7℃ (never
+located); 볼락 FishBase 9.3~22.1℃ (modelled) and fishing-site optima.
+
+## Official species coverage (verified 2026-09-27)
+
+The full KHOA 바다낚시지수 catalog, queried both through the Worker and directly at
+apis.data.go.kr (1,750 rows, 7 forecast days), contains only these `seafsTgfshNm` values: 감성돔, 농어,
+돌돔, 우럭, 참돔, 벵에돔, 기타어종, and "-" (blank). The official Swagger defines `seafsTgfshNm` only as
+"대상어" (no enumerated list). Separately, the upstream returns **byte-identical data for
+`gubun=갯바위` and `gubun=선상`** (same totalCount, points and rows) although the spec marks `gubun`
+as a required "갯바위/선상 중 택 1" filter — so the app's 포인트 유형 selector currently has no effect
+on the data. Recorded as a provider-side behaviour, not worked around.

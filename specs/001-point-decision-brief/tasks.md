@@ -352,3 +352,9 @@ the last-seen httpClass through the existing onRetry callback instead of divergi
 - [X] T114 Research 우럭/감성돔/농어/돌돔/벵에돔 temperature + season at the v1.5 evidence bar; re-verify every adopted number on the source page (research/species-environment-evidence.md v1.6.6).
 - [X] T115 species-profiles.ts → profileVersion 2026-09-v3 (5 species updated, 참돔 placeholder ceiling replaced); environment-guidance tests updated to the new evidence.
 - [X] T116 Full gate, commit/push, production check.
+
+# v1.6.7 Tasks — 광어·볼락·쥐노래미; official species coverage check
+
+- [X] T117 Verify official species coverage (full catalog via Worker and direct upstream) and document the gubun no-op.
+- [X] T118 Research + re-verify 광어/볼락/쥐노래미; add profiles (v4); unit test for the three.
+- [ ] T119 Full gate, commit/push, production check.

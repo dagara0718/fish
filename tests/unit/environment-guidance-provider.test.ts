@@ -49,6 +49,14 @@ describe('computeEnvironmentGuidance', () => {
     expect(level('농어')).toBe('MODERATE') // 21~27℃ MATCH, September outside 12~3월
     expect(level('우럭')).toBe('MODERATE') // above the 17~20℃ optimum but within 4~27℃ survival
     expect(level('참돔')).toBe('MODERATE') // was LOW only because of the 18℃ placeholder ceiling
+
+  })
+  it('evaluates the v1.6.7 species that KHOA does not grade (광어, 쥐노래미, 볼락)', () => {
+    const guidance = computeEnvironmentGuidance([realShapedRecord], point, '20260916')
+    const level = (name: string) => guidance.find(item => item.speciesName === name)?.suitability
+    expect(level('광어')).toBe('MODERATE') // 18~25℃ MATCH, September outside 2~6월
+    expect(level('쥐노래미')).toBe('LOW') // 24.3℃ is above both 15~20 and 14~23
+    expect(level('볼락')).toBe('INSUFFICIENT_EVIDENCE') // season cited, no temperature range
   })
   it('propagates STALE trust when the reference forecast date is in the past, independent of species-index conflict', () => {
     const past = { ...realShapedRecord, predcYmd: '20200101' }
