@@ -345,4 +345,4 @@ the last-seen httpClass through the existing onRetry callback instead of divergi
 - [X] T110 guidanceBySlot in normalizeOfficial; summarizeNearby slot selection; REQ-FUNC-SPOT-002,005.
 - [X] T111 SpotBrief + LiveApp showSpot/loadSpot (map click, GPS; GPS fix never sent); REQ-FUNC-SPOT-001~004.
 - [X] T112 e2e/spot-brief.spec.ts; live-map/marine specs updated for the user-approved requirement change.
-- [ ] T113 Full gate + commit/push + Pages production check.
+- [X] T113 Full gate + commit/push + Pages production check.
