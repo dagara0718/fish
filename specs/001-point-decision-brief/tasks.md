@@ -338,4 +338,4 @@ the last-seen httpClass through the existing onRetry callback instead of divergi
 - [X] T106 Worker /api/marine-current: validRange + isNoSearchData → 422 NO_DATA_FOR_LOCATION (never cached) in worker/src/index.ts; tests; REQ-FUNC-MARINE-UI-008.
 - [X] T107 summarizeNearby in src/official-index/nearby-comparison.ts + tests/unit/nearby-comparison.test.ts; REQ-FUNC-NEARBY-002~003.
 - [X] T108 NearbyComparisonPanel.tsx, LiveApp compareNearby (explicit, ≤3 lookups, cancelled by navigation), global.css; e2e/nearby-comparison.spec.ts; REQ-FUNC-NEARBY-001~004.
-- [ ] T109 Full verification gate + commit/push main + Worker deploy + Pages verification; Depends on: T106-T108.
+- [X] T109 Full verification gate + commit/push main + Worker deploy + Pages verification; Depends on: T106-T108.

@@ -78,6 +78,18 @@ describe('Worker security boundary', () => {
   })
 })
 
+describe('Worker cache hits', () => {
+  it('returns cached bodies with the same CORS headers as fresh responses (regression: repeat requests were CORS-blocked)', async () => {
+    const cachedBody = { result: { data: [{ current_speed: 1, current_dir: 2, obs_date: '2026-09-16 12:00:00', type: '' }], meta: { sch_Stime: 'a', sch_Etime: 'b', lat: '35.123', lon: '129.456' } } }
+    const d = { fetch: vi.fn<typeof fetch>(), now: () => new Date('2026-09-16T00:00:00Z'), cache: { match: vi.fn().mockResolvedValue(Response.json(cachedBody)), put: vi.fn() } }
+    const response = await handleRequest(new Request('https://worker.example/api/marine-current?SDate=20260916&SHour=11&SMinute=30&EDate=20260916&EHour=12&EMinute=30&lat=35.123&lon=129.456&ResultType=json', { headers: { Origin: 'https://dagara0718.github.io' } }), { ...env, KHOA_MARINE_SERVICE_KEY: 'k' }, d)
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://dagara0718.github.io')
+    expect(await response.json()).toEqual(cachedBody)
+    expect(d.fetch).not.toHaveBeenCalled()
+  })
+})
+
 describe('Worker marine current route', () => {
   const marineKey = 'marine-test-only-secret'
   const marineEnv = { ...env, KHOA_MARINE_SERVICE_KEY: marineKey }

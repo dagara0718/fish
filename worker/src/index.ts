@@ -23,7 +23,9 @@ const boundFetch: typeof fetch = (input, init) => globalThis.fetch(input, init)
 
 async function proxyUpstream(remote: URL, deps: Dependencies, reply: (status: number, body: unknown) => Response, cacheKey: Request | undefined, cacheTtlSeconds: number, redact: (text: string) => boolean, malformedCheck: (body: string) => unknown, requireJsonContentType = true): Promise<Response> {
   const cached = cacheKey ? await deps.cache?.match(cacheKey).catch(() => undefined) : undefined
-  if (cached) return new Response(await cached.text(), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } })
+  // Cache hits go through reply() like fresh responses: a bare Response here dropped the CORS headers,
+  // so browsers blocked every repeat request within the TTL (e.g. catalog pages already fetched once).
+  if (cached) return reply(200, JSON.parse(await cached.text()))
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10_000)
   try {
     // Workers' fetch only supports redirect 'follow'|'manual' ('error' throws a TypeError at the
