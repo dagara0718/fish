@@ -49,6 +49,7 @@ test('compares the nearest 3 official points only on request, never as a value o
   await expect(gamseong).toContainText('좋음 2곳')
   await expect(gamseong).not.toContainText('값 없음') // the failed point is not counted as "no value"
   await expect(gamseong).not.toContainText('매우나쁨') // the 4th, far point is not compared
+  await expect(page.locator('.nearest-candidates li', { hasText: '먼 시연 기준점' })).toHaveCount(0) // 38.9 km: not even listed
   await expect(panel.locator('.nearby-species li', { hasText: '참돔' })).toContainText('값 없음 1곳') // the failed point is excluded, not counted as no value
   await expect(panel.locator('.nearby-points')).toContainText('실패 시연 기준점')
   await expect(panel.locator('.nearby-points')).toContainText('공식 데이터 확인 실패')
@@ -82,7 +83,7 @@ test('a new map click cancels and clears a comparison', async ({ page, isMobile 
   await expect(page.getByText('주변 공식 기준 포인트 지수를 확인하는 중입니다.')).toHaveCount(0)
 })
 
-test('offers no comparison when no official point is within 15 km', async ({ page, isMobile }) => {
+test('lists and compares nothing when no official point is within 15 km', async ({ page, isMobile }) => {
   const perPoint: string[] = []
   await page.route('https://proxy.example/**', route => {
     const name = new URL(route.request().url()).searchParams.get('placeName')
@@ -94,8 +95,9 @@ test('offers no comparison when no official point is within 15 km', async ({ pag
   await page.getByRole('button', { name: '검색', exact: true }).click()
   if (isMobile) await page.getByRole('button', { name: '지도', exact: true }).click()
   await page.locator('[data-mock-map]').click({ position: { x: 250, y: 300 } })
-  await expect(page.getByRole('heading', { name: '가장 가까운 공식 기준 포인트' })).toBeVisible() // 38.9 km: still a candidate
-  await expect(page.getByText('15 km 이내에 공식 기준 포인트가 없어 주변 비교를 제공하지 않습니다.', { exact: false })).toBeVisible()
+  // Shown in the 선택 위치 card too, so it is visible in the mobile map view (the list panel is hidden there).
+  await expect(page.locator('.arbitrary-preview').getByText('선택 위치 15 km 이내에는 공식 바다낚시지수 기준 포인트가 없습니다.')).toBeVisible() // 38.9 km point is not listed
+  await expect(page.getByRole('heading', { name: /가장 가까운 공식 기준 포인트/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /공식 지수 비교/ })).toHaveCount(0)
   expect(perPoint).toHaveLength(0)
 })
