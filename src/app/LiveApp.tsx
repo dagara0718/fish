@@ -17,10 +17,10 @@ import type { MarineCurrentResult } from '../species-guidance/contracts'
 const NEAREST_CANDIDATE_LIMIT = 5
 // Bounded so one comparison costs at most 3 official-index lookups against the shared Worker quota.
 const NEARBY_COMPARE_LIMIT = 3
-// Arbitrary map click: only official points this close are listed and compared (user decision,
-// 2026-09-27) — a point tens of km away says little about the clicked spot. The GPS "현재 위치 사용"
-// list keeps rankLocationCandidates' default 80 km radius.
-const NEARBY_MAX_KM = 15
+// Spot brief (map click or GPS fix): only official points this close are listed, compared and used
+// for expected species (user decision 2026-09-27; widened 15 → 30 km on 2026-10-02 because too few
+// points were found).
+const NEARBY_MAX_KM = 30
 
 export function LiveApp() {
   const [provider] = useState(() => new LiveOfficialFishingIndexProvider(import.meta.env.VITE_FISHING_API_BASE_URL ?? ''))

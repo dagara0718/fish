@@ -8,7 +8,7 @@ import { NearbyComparisonPanel } from './NearbyComparisonPanel'
 // v1.6.5 (REQ-FUNC-SPOT-001~005): a species brief for the user's own spot — a map click or the GPS
 // fix — shown directly, without asking the user to pick an official point first. It combines:
 // environment-based species guidance from the nearest official point's own forecast (water
-// temperature + season), the official grades of up to 3 official points within 15 km, and the tidal
+// temperature + season), the official grades of up to 3 official points within the brief's radius (NEARBY_MAX_KM), and the tidal
 // current forecast. None of these is a measured value at the spot or a catch probability, and the
 // panel says which source each part comes from.
 export function SpotBrief({ source, maxKm, candidates, entries, slot, onSlotChange, marine, marineBusy, marineBasis, onMarineRetry, onPickPoint }: {

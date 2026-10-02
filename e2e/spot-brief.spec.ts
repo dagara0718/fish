@@ -52,7 +52,7 @@ test('a map click shows the spot brief directly: expected species, nearby offici
   await expect(brief.getByRole('heading', { name: '환경 기반 예상어종' })).toBeVisible()
   await expect(brief.getByText(/예상 어종의 수온·계절 기준: 가까운 시연 기준점\(1\.1 km\) 공식 예보/)).toBeVisible()
   await expect(brief.getByText(/실측값이나 조과 확률이 아닙니다/)).toBeVisible()
-  // Nearby official grades: the 3 points within 15 km, the 38.9 km point excluded, the failed one shown as such.
+  // Nearby official grades: the 3 points within 30 km, the 38.9 km point excluded, the failed one shown as such.
   expect([...new Set(perPoint)].sort()).toEqual(['가까운 시연 기준점', '실패 시연 기준점', '중간 시연 기준점'].sort())
   const gamseong = brief.locator('.nearby-species li', { hasText: '감성돔' })
   await expect(gamseong).toContainText('좋음 2곳')
@@ -85,11 +85,11 @@ test('the date selector switches every official part of the brief to the chosen 
   await expect(brief.getByText(/공식 예보 · 2099-01-02 · 오후/)).toBeVisible()
 })
 
-test('with no official point within 15 km there is no species brief, but the tidal current is still shown', async ({ page, isMobile }) => {
+test('with no official point within 30 km there is no species brief, but the tidal current is still shown', async ({ page, isMobile }) => {
   const { perPoint, marine } = await setup(page, { points: [POINTS[3]!] })
   await clickMap(page, isMobile)
   const brief = page.locator('.live-brief')
-  await expect(brief.getByText('지도에서 선택한 위치 15 km 이내에 공식 바다낚시지수 기준 포인트가 없습니다')).toBeVisible()
+  await expect(brief.getByText('지도에서 선택한 위치 30 km 이내에 공식 바다낚시지수 기준 포인트가 없습니다')).toBeVisible()
   await expect(brief.getByRole('heading', { name: '환경 기반 예상어종' })).toHaveCount(0)
   expect(perPoint).toHaveLength(0)
   await expect(brief.locator('.marine-section').getByText('33–33 cm/s')).toBeVisible()
